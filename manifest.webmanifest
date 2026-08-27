@@ -1,0 +1,10 @@
+{
+  "name": "Ultimate Prompt Creator",
+  "short_name": "Prompt Creator",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#172033",
+  "description": "Searchable master prompt database and live prompt builder."
+}
