@@ -1,0 +1,25 @@
+ULTIMATE PROMPT CREATOR V7.2 CACHE RESET
+
+Upload ALL FOUR files to the ROOT of the GitHub repository:
+
+1. index.html
+2. v7-2-cache-reset.html
+3. db-v7-2.json
+4. sw.js
+
+IMPORTANT:
+- Replace the existing index.html.
+- Replace the existing sw.js if GitHub shows one.
+- Keep all four at the same top/root level.
+- Do not put them in a folder.
+
+FIRST TEST URL:
+https://mikecappi22.github.io/Ultimate-prompt-creator-/v7-2-cache-reset.html
+
+You must see:
+V7.2 CACHE RESET
+Cache reset active.
+Ready — 38,794 searchable prompt choices loaded.
+
+After that works, open the normal root site:
+https://mikecappi22.github.io/Ultimate-prompt-creator-/
