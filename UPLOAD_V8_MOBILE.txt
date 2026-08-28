@@ -1,0 +1,16 @@
+ULTIMATE PROMPT CREATOR V8 MOBILE
+
+Website database additions:
+Hairstyles + Wearing Styles: 2,331
+Facial Expressions: 435
+Sportswear + Workout Gear: 269
+
+Total searchable choices: 41,829
+Database size: 10.79 MB
+
+TEST FIRST:
+Upload prompt-v8-mobile.html and db-v8-mobile.json to the root.
+Open:
+https://mikecappi22.github.io/Ultimate-prompt-creator-/prompt-v8-mobile.html
+
+After testing, replace index.html with this V8 Mobile index.html.

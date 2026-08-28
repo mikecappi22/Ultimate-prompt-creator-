@@ -1,14 +1,1 @@
-self.addEventListener('install', event => {
-  self.skipWaiting();
-});
-self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    const names = await caches.keys();
-    await Promise.all(names.map(name => caches.delete(name)));
-    await self.registration.unregister();
-    await self.clients.claim();
-  })());
-});
-self.addEventListener('fetch', event => {
-  event.respondWith(fetch(event.request));
-});
+self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',event=>event.waitUntil((async()=>{const n=await caches.keys();await Promise.all(n.map(x=>caches.delete(x)));await self.registration.unregister();await self.clients.claim();})()));self.addEventListener('fetch',event=>event.respondWith(fetch(event.request)));
