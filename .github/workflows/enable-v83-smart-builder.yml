@@ -1,0 +1,54 @@
+name: Enable V8.3 Smart Builder
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - smart-builder-v83-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  patch-v83:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add Smart Builder loader
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tag = '<script src="smart-builder-v83.js?v=20260904-v83"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if tag not in text:
+                  text=text.replace('</body>', tag+'\n</body>', 1)
+                  p.write_text(text,encoding='utf-8')
+                  print(name+': loader added')
+              else:
+                  print(name+': loader already present')
+          PY
+
+      - name: Validate V8.3 loader
+        shell: bash
+        run: |
+          node --check smart-builder-v83.js
+          grep -Fq 'smart-builder-v83.js?v=20260904-v83' index.html
+          grep -Fq 'smart-builder-v83.js?v=20260904-v83' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V8.3 loader
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No V8.3 loader changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Enable V8.3 smart builder'
+          git push
