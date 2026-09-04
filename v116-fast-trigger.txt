@@ -1,0 +1,2 @@
+V11.6 FAST PIPELINES
+Rebuild Vision Lab from validated source chunks and enable performance-first Ollama architecture.
