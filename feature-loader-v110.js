@@ -26,6 +26,7 @@ async function boot(){
     await load('photo-forensics-describer-v111.js?v=20260904-v116');
     await load('prompt-roast-ai-v113.js?v=20260904-v116');
     await load('prompt-roast-fast-v116.js?v=20260904-v116');
+    await load('mobile-bridge-v117.js?v=20260904-v117');
   }catch(e){
     console.warn(e);
     const loadCard=document.getElementById('loadCard');
