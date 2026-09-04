@@ -1,0 +1,52 @@
+name: Enable V10.1 Interactive Core
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - v101-interactive-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v101:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate V10.1 scripts
+        run: |
+          node --check core-worker-v101.js
+          node --check feature-loader-v101.js
+
+      - name: Switch pages to V10.1
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              text=text.replace('core-worker-v100.js?v=20260904-v100','core-worker-v101.js?v=20260904-v101')
+              text=text.replace('feature-loader-v100.js?v=20260904-v100','feature-loader-v101.js?v=20260904-v101')
+              text=text.replace('Ultimate Prompt Creator V10 Stable Worker','Ultimate Prompt Creator V10.1 Interactive Core')
+              p.write_text(text,encoding='utf-8')
+          PY
+
+      - name: Validate page attachment
+        run: |
+          grep -Fq 'core-worker-v101.js?v=20260904-v101' index.html
+          grep -Fq 'feature-loader-v101.js?v=20260904-v101' index.html
+          grep -Fq 'core-worker-v101.js?v=20260904-v101' prompt-v8-mobile.html
+          grep -Fq 'feature-loader-v101.js?v=20260904-v101' prompt-v8-mobile.html
+          ! grep -Fq 'core-worker-v100.js?v=20260904-v100' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V10.1 interactive core
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Switch to V10.1 interactive core'
+          git push
