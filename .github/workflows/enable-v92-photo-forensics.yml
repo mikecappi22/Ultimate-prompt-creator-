@@ -1,0 +1,61 @@
+name: Enable V9.2 Photo Forensics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - photo-forensics-v92-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v92:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate V9.2 module
+        shell: bash
+        run: |
+          node --check photo-forensics-v92.js
+          grep -Fq 'V9.2 PHOTO FORENSICS UPGRADE' photo-forensics-v92.js
+          grep -Fq 'Run Full Analysis' photo-forensics-v92.js
+          grep -Fq 'Subject palette' photo-forensics-v92.js
+          grep -Fq 'Environment palette' photo-forensics-v92.js
+
+      - name: Attach V9.2 Photo Forensics
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tag='<script src="photo-forensics-v92.js?v=20260904-v92"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if tag not in text:
+                  text=text.replace('</body></html>', tag+'\n</body></html>')
+              text=text.replace('Ultimate Prompt Creator V9.1 Deep Local Vision','Ultimate Prompt Creator V9.2 Photo Forensics')
+              p.write_text(text,encoding='utf-8')
+              print(name,'patched')
+          PY
+
+      - name: Validate page attachment
+        shell: bash
+        run: |
+          grep -Fq 'photo-forensics-v92.js?v=20260904-v92' index.html
+          grep -Fq 'photo-forensics-v92.js?v=20260904-v92' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V9.2 Photo Forensics
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No V9.2 page changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Enable V9.2 photo forensics upgrade'
+          git push
