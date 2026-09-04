@@ -1,0 +1,110 @@
+name: Enable V9.3 Fast Database
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - fast-db-v93-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v93:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate source database
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('db-v8-mobile.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          assert isinstance(d.get('records'), list)
+          assert len(d['records']) >= 40000
+          print('database records:', len(d['records']))
+          PY
+
+      - name: Create compressed database
+        shell: bash
+        run: |
+          gzip -9 -c db-v8-mobile.json > db-v8-mobile.v93.json.gz
+          ls -lh db-v8-mobile.json db-v8-mobile.v93.json.gz
+
+      - name: Create fast database loader
+        shell: bash
+        run: |
+          cat > db-fast-loader-v93.js <<'JS'
+          (function(){
+            'use strict';
+            if(window.__UPC_FAST_DB_V93__) return;
+            window.__UPC_FAST_DB_V93__=true;
+            const nativeFetch=window.fetch.bind(window);
+            const isMasterDb=(input)=>{
+              try{
+                const u=typeof input==='string'?input:(input&&input.url)||'';
+                return /(^|\/)db-v8-mobile\.json(?:\?|$)/.test(u);
+              }catch(_){return false;}
+            };
+            window.fetch=async function(input,init){
+              if(isMasterDb(input) && typeof DecompressionStream==='function'){
+                try{
+                  const r=await nativeFetch('db-v8-mobile.v93.json.gz?v=20260904-v93',{cache:'no-store'});
+                  if(!r.ok) throw new Error('compressed DB HTTP '+r.status);
+                  const stream=r.body.pipeThrough(new DecompressionStream('gzip'));
+                  const txt=await new Response(stream).text();
+                  if(!txt || txt[0]!=='{') throw new Error('compressed DB produced invalid JSON text');
+                  return new Response(txt,{status:200,headers:{'Content-Type':'application/json','X-UPC-DB':'compressed-v93'}});
+                }catch(err){
+                  console.warn('V9.3 compressed DB fallback failed; retrying original database.',err);
+                }
+              }
+              return nativeFetch(input,init);
+            };
+          })();
+          JS
+          node --check db-fast-loader-v93.js
+
+      - name: Attach fast loader and improve error reporting
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tag='<script src="db-fast-loader-v93.js?v=20260904-v93"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if tag not in text:
+                  text=text.replace('</head>', tag+'\n</head>', 1)
+              text=text.replace('Ultimate Prompt Creator V9.2.1 Safe Load','Ultimate Prompt Creator V9.3 Fast Database')
+              old="$(\"loading\").innerHTML='<div style=\"color:#9b2d2d\">V8.1 database failed to load.</div><div class=\"help\">Make sure <b>db-v8-mobile.json</b> and camera add-on parts 1–5 are beside this HTML file in GitHub.</div>';"
+              new="$(\"loading\").innerHTML='<div style=\"color:#9b2d2d\">Database failed to load.</div><div class=\"help\">Error: '+String(err)+'</div><div class=\"help\">V9.3 will try the compressed database first and the original JSON as fallback.</div>';"
+              text=text.replace(old,new)
+              p.write_text(text,encoding='utf-8')
+              print(name,'patched')
+          PY
+
+      - name: Validate deployment
+        shell: bash
+        run: |
+          test -s db-v8-mobile.v93.json.gz
+          node --check db-fast-loader-v93.js
+          grep -Fq 'db-fast-loader-v93.js?v=20260904-v93' index.html
+          grep -Fq 'db-fast-loader-v93.js?v=20260904-v93' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit fast database loader
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add db-v8-mobile.v93.json.gz db-fast-loader-v93.js index.html prompt-v8-mobile.html
+          if git diff --cached --quiet; then
+            echo 'No V9.3 changes needed.'
+            exit 0
+          fi
+          git commit -m 'Add V9.3 compressed fast database loader'
+          git push
