@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#172033">
-<title>Ultimate Prompt Creator V9.3 Fast Database</title>
+<title>Ultimate Prompt Creator V10 Stable Worker</title>
 <style>
 :root{--bg:#f4f6f8;--card:#fff;--ink:#172033;--muted:#647184;--line:#d9e0e8;--accent:#334a6b;--soft:#edf1f6;--warm:#fff8ef}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:14px 10px calc(100px + env(safe-area-inset-bottom))}
@@ -98,12 +98,11 @@ button:active{transform:translateY(0) scale(.98);box-shadow:0 2px 7px rgba(23,32
 </script>
 
 <link rel="stylesheet" href="creative-studio-v90.css?v=20260904-v90">
-<script src="db-fast-loader-v93.js?v=20260904-v93"></script>
 </head>
 <body>
 <div class="wrap">
-<h1>Ultimate Prompt Creator <span class="badge">V9.0 CREATIVE STUDIO</span></h1>
-<p class="sub">42,672 prompt choices · includes 843 Camera / Cinematography / Film terms · mobile-optimized loading · up to 1,000 search results</p><div class="card" style="border-color:#b9ddc3;background:#f2fbf5"><strong>Cache reset active.</strong> This page removes the original cached GitHub Pages version from this browser.</div>
+<h1>Ultimate Prompt Creator <span class="badge">V10.0 STABLE WORKER</span></h1>
+<p class="sub">42,672 prompt choices · includes 843 Camera / Cinematography / Film terms · mobile-optimized loading · up to 1,000 search results</p><div class="card" style="border-color:#b9ddc3;background:#f2fbf5"><strong>Stable worker architecture active.</strong> The database now loads and searches off the main page thread.</div>
 
 <div class="card" id="loadCard">
   <div id="loading" class="loading">Loading prompt database…<div class="progress"><div class="bar"></div></div></div>
@@ -169,194 +168,6 @@ button:active{transform:translateY(0) scale(.98);box-shadow:0 2px 7px rgba(23,32
 </div>
 </div>
 
-<script>
-"use strict";
-if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});}
-const $=id=>document.getElementById(id);
-let META=null, selected=[], searchTimer=null, renderToken=0;
-const IDENTITY_TEXT={
- none:"",
- light:"Use the provided reference image only to maintain consistent recognizable facial features, apparent age, hair identity, eye color, skin tone, and overall appearance. Allow the requested pose, expression, wardrobe, action, camera, lighting, and scene instructions to take priority.",
- strong:"Use the uploaded reference image as the sole identity source. Preserve the subject's exact recognizable facial identity, apparent age, facial proportions, hair identity, eye color, skin tone, body identity, and natural asymmetry while still following the requested pose, wardrobe, action, camera, lighting, and scene."
-};
-const ALIASES={grey:["gray","grey"],blonde:["blonde","blond"],ponytail:["ponytail","pony tail"],f2:["f/2","f2"],f28:["f/2.8","f2.8","f28"],bw:["black white","black and white"]};
-const norm=s=>String(s||"").toLowerCase();
-const esc=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const sourceName=r=>META.sources[r[0]], stageName=r=>META.stages[r[1]], keyword=r=>r[2], phrase=r=>r[3], context=r=>r[4]||"";
-const textFor=r=>$("wording").value==="keyword"?keyword(r):phrase(r);
-function termsFor(t){return ALIASES[t]||[t];}
-function matchesRecord(r,q,src,stage){
- if(src && sourceName(r)!==src)return false;
- if(stage && stageName(r)!==stage)return false;
- if(!q)return true;
- const hay=norm(keyword(r)+" "+phrase(r)+" "+sourceName(r)+" "+context(r));
- return q.split(/\s+/).filter(Boolean).every(t=>termsFor(t).some(a=>hay.includes(a)));
-}
-function activeSearch(){return $("search").value.trim()||$("source").value||$("stageFilter").value;}
-function renderResults(){
- if(!META)return;
- renderToken++; const token=renderToken;
- const q=norm($("search").value.trim()),src=$("source").value,stage=$("stageFilter").value,limit=parseInt($("limit").value,10)||1000;
- const root=$("results"); root.innerHTML="";
- if(!activeSearch()){
-   $("count").textContent=`${META.count.toLocaleString()} total choices · type a search or choose a database`;
-   root.innerHTML='<div class="empty">Results are intentionally hidden until you search. This prevents 1,000 cards from loading on startup.</div>'; return;
- }
- const hits=[];
- for(const r of META.records){if(matchesRecord(r,q,src,stage)){hits.push(r); if(hits.length>=limit+1)break;}}
- const hasMore=hits.length>limit; if(hasMore)hits.pop();
- $("count").textContent=`Showing ${hits.length.toLocaleString()}${hasMore?"+":""} matches · limit ${limit.toLocaleString()} · ${META.count.toLocaleString()} total choices`;
- if(!hits.length){root.innerHTML='<div class="empty">No matches. Try fewer words or a broader term.</div>';return;}
- let i=0;
- function batch(){
-   if(token!==renderToken)return;
-   const frag=document.createDocumentFragment();
-   const end=Math.min(i+75,hits.length);
-   for(;i<end;i++){
-      const r=hits[i], row=document.createElement("div"); row.className="result";
-      const left=document.createElement("div");
-      left.innerHTML=`<strong>${esc(keyword(r))}</strong><span class="chip">${esc(sourceName(r))}</span><span class="chip">${esc(stageName(r))}</span><div class="phrase">${esc(phrase(r))}</div>`;
-      const add=document.createElement("button");add.className="add";add.textContent="Add";
-      add.onclick=()=>{selected.push(r);renderSelectedManualSafe();updatePromptManualSafe();showStatus("Added: "+keyword(r));};
-      row.append(left,add); frag.appendChild(row);
-   }
-   root.appendChild(frag);
-   if(i<hits.length)requestAnimationFrame(batch);
- }
- requestAnimationFrame(batch);
-}
-function renderSelected(){
- const root=$("selected");root.innerHTML="";
- if(!selected.length){root.innerHTML='<div class="empty">Nothing selected yet.</div>';return;}
- META.stages.forEach(stage=>{
-   const entries=selected.map((r,i)=>({r,i})).filter(x=>stageName(x.r)===stage);
-   if(!entries.length)return;
-   const box=document.createElement("div");box.className="stage";
-   const head=document.createElement("div");head.className="stagehead";head.textContent=stage;box.appendChild(head);
-   entries.forEach(e=>{
-     const row=document.createElement("div");row.className="item";
-     const t=document.createElement("div");t.innerHTML=`${esc(textFor(e.r))}<div class="src">${esc(sourceName(e.r))}</div>`;
-     const rm=document.createElement("button");rm.className="remove";rm.textContent="Remove";rm.onclick=()=>{selected.splice(e.i,1);renderSelected();updatePrompt();};
-     row.append(t,rm);box.appendChild(row);
-   });root.appendChild(box);
- });
-}
-function selectionsOnly(){
- return selected.map((r,i)=>({r,i})).sort((a,b)=>a.r[1]-b.r[1]||a.i-b.i).map(x=>textFor(x.r)).filter(Boolean).join($("separator").value);
-}
-function updatePrompt(){
- const parts=[],id=IDENTITY_TEXT[$("identityMode").value]||"",body=selectionsOnly(),suf=$("suffix").value.trim();
- if(id)parts.push(id); if(body)parts.push(body); if(suf)parts.push(suf);
- $("prompt").value=parts.join($("separator").value);
-}
-function showStatus(s){$("status").textContent=s;setTimeout(()=>$("status").textContent="",1400);}
-async function copyText(t){try{await navigator.clipboard.writeText(t);showStatus("Copied.");}catch(e){$("prompt").focus();$("prompt").select();document.execCommand("copy");showStatus("Copied.");}}
-function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(renderResults,160);}
-$("search").addEventListener("input",debounceSearch);
-$("source").addEventListener("change",renderResults);
-$("stageFilter").addEventListener("change",renderResults);
-$("limit").addEventListener("change",renderResults);
-$("identityMode").addEventListener("change",()=>{if(META)updatePromptManualSafe();});
-$("wording").addEventListener("change",()=>{if(META){renderSelectedManualSafe();updatePromptManualSafe();}});
-$("separator").addEventListener("change",()=>{if(META)updatePromptManualSafe();});
-$("suffix").addEventListener("input",()=>{if(META)updatePromptManualSafe();});
-document.querySelectorAll(".quick button").forEach(b=>b.onclick=()=>{$("search").value=b.dataset.q;renderResults();});
-$("addManual").onclick=()=>{
- const v=$("manualText").value.trim();if(!v)return showStatus("Type custom text first.");
- const gi=parseInt($("manualStage").value,10);
- selected.push([-1,gi,v,v,"manual custom entry"]);
- // special source name handling
- const last=selected[selected.length-1]; last._manual=true;
- $("manualText").value="";renderSelectedManualSafe();updatePromptManualSafe();showStatus("Custom text added.");
-};
-function sourceNameSafe(r){return r[0]===-1?"Manual Custom Text":sourceName(r)}
-function stageNameSafe(r){return META.stages[r[1]]}
-function textForSafe(r){return $("wording").value==="keyword"?r[2]:r[3]}
-function renderSelectedManualSafe(){
- const root=$("selected");root.innerHTML="";
- if(!selected.length){root.innerHTML='<div class="empty">Nothing selected yet.</div>';return;}
- META.stages.forEach((stage,gi)=>{
-   const entries=selected.map((r,i)=>({r,i})).filter(x=>x.r[1]===gi);
-   if(!entries.length)return;
-   const box=document.createElement("div");box.className="stage";
-   const head=document.createElement("div");head.className="stagehead";head.textContent=stage;box.appendChild(head);
-   entries.forEach(e=>{
-     const row=document.createElement("div");row.className="item";
-     const t=document.createElement("div");t.innerHTML=`${esc(textForSafe(e.r))}<div class="src">${esc(sourceNameSafe(e.r))}</div>`;
-     const rm=document.createElement("button");rm.className="remove";rm.textContent="Remove";rm.onclick=()=>{selected.splice(e.i,1);renderSelectedManualSafe();updatePromptManualSafe();};
-     row.append(t,rm);box.appendChild(row);
-   });root.appendChild(box);
- });
-}
-function selectionsOnlyManualSafe(){
- return selected.map((r,i)=>({r,i})).sort((a,b)=>a.r[1]-b.r[1]||a.i-b.i).map(x=>textForSafe(x.r)).filter(Boolean).join($("separator").value);
-}
-function updatePromptManualSafe(){
- const parts=[],id=IDENTITY_TEXT[$("identityMode").value]||"",body=selectionsOnlyManualSafe(),suf=$("suffix").value.trim();
- if(id)parts.push(id);if(body)parts.push(body);if(suf)parts.push(suf);$("prompt").value=parts.join($("separator").value);
-}
-// Route standard functions through manual-safe variants after database loads.
-$("copy").onclick=()=>copyText($("prompt").value);
-$("copyComponents").onclick=()=>copyText(selectionsOnlyManualSafe());
-const card=$("promptCard");$("togglePrompt").onclick=()=>{const c=card.classList.toggle("collapsed");$("togglePrompt").textContent=c?"Show Live Prompt":"Hide Live Prompt";};
-
-(async()=>{
- try{
-   const res=await fetch("db-v8-mobile.json?v=20260904-camera-v81",{cache:"no-store"});
-   if(!res.ok)throw new Error("Database HTTP "+res.status);
-   META=await res.json();
-
-   // V8.1 modular camera/cinematography add-on. Keep the large master DB untouched.
-   try{
-     const camPartUrls=[1,2,3,4,5].map(n=>`camera-addon-v81.part${n}.txt?v=20260904-camera-v81`);
-     const camPartResponses=await Promise.all(camPartUrls.map(u=>fetch(u,{cache:"no-store"})));
-     const badPart=camPartResponses.find(r=>!r.ok);
-     if(badPart)throw new Error("Camera add-on HTTP "+badPart.status);
-     if(typeof DecompressionStream!=="function")throw new Error("This browser does not support the camera add-on decompressor.");
-     const packed=(await Promise.all(camPartResponses.map(r=>r.text()))).join("").trim();
-     const packedBytes=Uint8Array.from(atob(packed),c=>c.charCodeAt(0));
-     const unpacked=new Blob([packedBytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-     const cam=JSON.parse(await new Response(unpacked).text());
-     if(!META.sources.includes(cam.name)){
-       const srcIndex=META.sources.length;
-       META.sources.push(cam.name);
-       let stageIndex=META.stages.indexOf(cam.stage);
-       if(stageIndex<0)stageIndex=Math.min(5,META.stages.length-1);
-       const slug=s=>String(s||"").toUpperCase().replace(/[^A-Z0-9]+/g,"_").replace(/^_+|_+$/g,"");
-       for(const [category,rows] of Object.entries(cam.groups||{})){
-         for(const r of rows){
-           const media=r[2]||"Both";
-           const stableId=`CAM_${slug(category)}_${slug(r[0])}`;
-           const ctx=`ID:${stableId} | Category:${category} | Media:${media}`;
-           META.records.push([srcIndex,stageIndex,r[0],r[1],ctx]);
-         }
-       }
-       META.count=META.records.length;
-     }
-   }catch(cameraErr){
-     console.warn("Camera add-on failed to load; base database remains available.",cameraErr);
-     META.count=META.records.length;
-   }
-
-   META.sources.forEach(s=>$("source").add(new Option(s,s)));
-   META.stages.forEach((s,i)=>{$("stageFilter").add(new Option(s,s));$("manualStage").add(new Option(s,i));});
-   $("search").disabled=false;$("source").disabled=false;$("stageFilter").disabled=false;
-   $("loading").hidden=true;$("loaded").hidden=false;$("loaded").textContent=`Ready — ${META.count.toLocaleString()} searchable prompt choices loaded.`;
-   $("count").textContent=`${META.count.toLocaleString()} total choices · type a search or choose a database`;
-   // Replace functions used by selected standard database entries with manual-safe render/update.
-   window.renderSelected=renderSelectedManualSafe;window.updatePrompt=updatePromptManualSafe;
-   renderSelectedManualSafe();updatePromptManualSafe();
- }catch(err){
-   $("loading").innerHTML='<div style="color:#9b2d2d">Database failed to load.</div><div class="help">Error: '+String(err)+'</div><div class="help">V9.3 will try the compressed database first and the original JSON as fallback.</div>';
-   $("count").textContent=String(err);
- }
-})();
-</script>
-<script src="smart-builder-v83.js?v=20260904-v83"></script>
-<script src="creative-studio-v90.js?v=20260904-v90"></script>
-<script src="deep-vision-v91.js?v=20260904-v91"></script>
-<script src="deep-vision-bootstrap-v912.js?v=20260904-v912"></script>
-
-<script src="photo-forensics-v921-bootstrap.js?v=20260904-v921"></script>
-<script src="version-badge-v93.js?v=20260904-v93"></script>
+<script src="core-worker-v100.js?v=20260904-v100"></script>
+<script src="feature-loader-v100.js?v=20260904-v100"></script>
 </body></html>
