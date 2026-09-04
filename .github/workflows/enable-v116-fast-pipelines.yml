@@ -1,0 +1,41 @@
+name: Enable V11.6 Fast Pipelines
+
+on:
+  push:
+    paths:
+      - 'v116-fast-trigger.txt'
+      - '.github/workflows/enable-v116-fast-pipelines.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble-v116:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble Fast Vision Lab
+        run: |
+          cat vision-v116.part1.txt vision-v116.part2.txt vision-v116.part3.txt vision-v116.part4.txt vision-v116.part5.txt > vision-lab-v116.html
+      - name: Validate JavaScript
+        run: |
+          node --check prompt-roast-fast-v116.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('vision-lab-v116.html').read_text()
+          m=re.search(r'<script>\n(.*)\n</script>',s,re.S)
+          assert m, 'Vision Lab script not found'
+          Path('/tmp/vision-v116.js').write_text(m.group(1))
+          PY
+          node --check /tmp/vision-v116.js
+          grep -q 'V11.6 FAST VISION' vision-lab-v116.html
+          grep -q 'one Qwen3-VL image pass' vision-lab-v116.html
+      - name: Commit assembled Fast Vision Lab
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add vision-lab-v116.html
+          git diff --cached --quiet || git commit -m 'Assemble V11.6 Fast Vision Lab'
+          git push
