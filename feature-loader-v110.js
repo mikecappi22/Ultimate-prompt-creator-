@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const VERSION='V11.3 AI CREATIVE DIRECTOR';
+const VERSION='V11.5 STAGED AI DIRECTOR';
 let lastTransferTs=0;
-function setVersion(){const b=document.querySelector('.badge');if(b)b.textContent=VERSION;document.title='Ultimate Prompt Creator V11.3 AI Creative Director';}
+function setVersion(){const b=document.querySelector('.badge');if(b)b.textContent=VERSION;document.title='Ultimate Prompt Creator V11.5 Staged AI Director';}
 function load(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src.includes(src.split('?')[0])))return res();const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('Failed to load '+src));document.body.appendChild(s)})}
 function appendVisionTransfer(payload){
   if(!payload||payload.type!=='append-to-prompt'||!payload.text)return;
@@ -22,9 +22,10 @@ function installVisionReturnChannel(){
 async function boot(){
   setVersion();installVisionReturnChannel();
   try{
-    await load('studio-lite-v110.js?v=20260904-v113');
-    await load('photo-forensics-describer-v111.js?v=20260904-v113');
-    await load('prompt-roast-ai-v113.js?v=20260904-v113');
+    await load('studio-lite-v110.js?v=20260904-v115');
+    await load('photo-forensics-describer-v111.js?v=20260904-v115');
+    await load('prompt-roast-ai-v113.js?v=20260904-v115');
+    await load('prompt-roast-staged-v115.js?v=20260904-v115');
   }catch(e){
     console.warn(e);
     const loadCard=document.getElementById('loadCard');
