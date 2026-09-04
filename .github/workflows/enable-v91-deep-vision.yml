@@ -1,0 +1,59 @@
+name: Enable V9.1 Deep Local Vision
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - deep-vision-v91-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v91:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Deep Vision module
+        shell: bash
+        run: |
+          node --check deep-vision-v91.js
+          grep -Fq "V9.1 DEEP LOCAL VISION" deep-vision-v91.js
+          grep -Fq "Xenova/clip-vit-base-patch32" deep-vision-v91.js
+
+      - name: Attach V9.1 Deep Vision
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tag='<script src="deep-vision-v91.js?v=20260904-v91"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if tag not in text:
+                  text=text.replace('</body></html>', tag+'\n</body></html>')
+              text=text.replace('Ultimate Prompt Creator V9 Creative Studio','Ultimate Prompt Creator V9.1 Deep Local Vision')
+              p.write_text(text,encoding='utf-8')
+              print(name,'patched')
+          PY
+
+      - name: Validate page attachment
+        shell: bash
+        run: |
+          grep -Fq 'deep-vision-v91.js?v=20260904-v91' index.html
+          grep -Fq 'deep-vision-v91.js?v=20260904-v91' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V9.1 Deep Vision
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No V9.1 page changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Enable V9.1 deep local vision analyzer'
+          git push
