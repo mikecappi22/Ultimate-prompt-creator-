@@ -1,0 +1,62 @@
+name: Enable V9.2.1 Safe Load
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - photo-forensics-v921-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v921:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate safe-load bootstrap
+        shell: bash
+        run: |
+          node --check photo-forensics-v921-bootstrap.js
+          grep -Fq 'photo-forensics-v92.js?v=20260904-v921' photo-forensics-v921-bootstrap.js
+
+      - name: Move V9.2 out of startup path
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          direct='<script src="photo-forensics-v92.js?v=20260904-v92"></script>'
+          boot='<script src="photo-forensics-v921-bootstrap.js?v=20260904-v921"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              text=text.replace(direct,'')
+              if boot not in text:
+                  text=text.replace('</body></html>',boot+'\n</body></html>')
+              text=text.replace('Ultimate Prompt Creator V9.2 Photo Forensics','Ultimate Prompt Creator V9.2.1 Safe Load')
+              p.write_text(text,encoding='utf-8')
+              print(name,'patched')
+          PY
+
+      - name: Validate pages
+        shell: bash
+        run: |
+          ! grep -Fq 'photo-forensics-v92.js?v=20260904-v92' index.html
+          ! grep -Fq 'photo-forensics-v92.js?v=20260904-v92' prompt-v8-mobile.html
+          grep -Fq 'photo-forensics-v921-bootstrap.js?v=20260904-v921' index.html
+          grep -Fq 'photo-forensics-v921-bootstrap.js?v=20260904-v921' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit safe-load fix
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No safe-load changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Move V9.2 photo forensics out of critical startup path'
+          git push
