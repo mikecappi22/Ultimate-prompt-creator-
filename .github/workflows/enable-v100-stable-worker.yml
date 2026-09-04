@@ -1,0 +1,111 @@
+name: Enable V10 Stable Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - v100-stable-worker-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v100:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate V10 worker files
+        shell: bash
+        run: |
+          node --check db-worker-v100.js
+          node --check core-worker-v100.js
+          node --check feature-loader-v100.js
+          test -s db-v8-mobile.v93.json.gz
+          for n in 1 2 3 4 5; do test -s "camera-addon-v81.part${n}.txt"; done
+
+      - name: Replace legacy main-thread loader
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          old_names = [
+              'smart-builder-v83.js',
+              'creative-studio-v90.js',
+              'deep-vision-v91.js',
+              'deep-vision-bootstrap-v912.js',
+              'photo-forensics-v921-bootstrap.js',
+              'photo-forensics-v92.js',
+              'version-badge-v93.js',
+              'db-fast-loader-v93.js',
+              'photo-forensics-v921-bootstrap.js',
+              'photo-forensics-v921.js',
+              'photo-forensics-v921-bootstrap.js',
+              'photo-forensics-v921-bootstrap.js',
+              'photo-forensics-v921-bootstrap.js',
+          ]
+          old_pattern = re.compile(r'<script src="(?:' + '|'.join(re.escape(x) for x in sorted(set(old_names))) + r')(?:\?[^\"]*)?"></script>\s*')
+          core_tag = '<script src="core-worker-v100.js?v=20260904-v100"></script>'
+          feature_tag = '<script src="feature-loader-v100.js?v=20260904-v100"></script>'
+
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+
+              # Remove every old external startup feature/loader tag.
+              text=old_pattern.sub('', text)
+
+              # Replace the large inline legacy core script (the one beginning with "use strict").
+              start=text.find('<script>\n"use strict";')
+              if start < 0:
+                  raise SystemExit(f'{name}: legacy core script start not found')
+              end=text.find('</script>', start)
+              if end < 0:
+                  raise SystemExit(f'{name}: legacy core script end not found')
+              end += len('</script>')
+              text=text[:start] + core_tag + text[end:]
+
+              # Remove any duplicates created by previous iterations.
+              text=text.replace(feature_tag, '')
+              text=text.replace('</body></html>', feature_tag+'\n</body></html>')
+
+              # Make the deployed architecture obvious before JS executes.
+              text=re.sub(r'<title>.*?</title>', '<title>Ultimate Prompt Creator V10 Stable Worker</title>', text, count=1, flags=re.S)
+              text=re.sub(r'<h1>Ultimate Prompt Creator <span class="badge">.*?</span></h1>', '<h1>Ultimate Prompt Creator <span class="badge">V10.0 STABLE WORKER</span></h1>', text, count=1, flags=re.S)
+              text=text.replace('Cache reset active.</strong> This page removes the original cached GitHub Pages version from this browser.', 'Stable worker architecture active.</strong> The database now loads and searches off the main page thread.')
+
+              p.write_text(text, encoding='utf-8')
+              print(name, 'migrated to V10 worker core')
+          PY
+
+      - name: Validate V10 pages
+        shell: bash
+        run: |
+          grep -Fq 'core-worker-v100.js?v=20260904-v100' index.html
+          grep -Fq 'feature-loader-v100.js?v=20260904-v100' index.html
+          grep -Fq 'core-worker-v100.js?v=20260904-v100' prompt-v8-mobile.html
+          grep -Fq 'feature-loader-v100.js?v=20260904-v100' prompt-v8-mobile.html
+          grep -Fq 'V10.0 STABLE WORKER' index.html
+          grep -Fq 'V10.0 STABLE WORKER' prompt-v8-mobile.html
+          ! grep -Fq 'db-fast-loader-v93.js' index.html
+          ! grep -Fq 'db-fast-loader-v93.js' prompt-v8-mobile.html
+          ! grep -Fq '<script src="smart-builder-v83.js' index.html
+          ! grep -Fq '<script src="smart-builder-v83.js' prompt-v8-mobile.html
+          ! grep -Fq 'const res=await fetch("db-v8-mobile.json' index.html
+          ! grep -Fq 'const res=await fetch("db-v8-mobile.json' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V10 stable worker
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No V10 page changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Move database parsing and search to V10 Web Worker'
+          git push
