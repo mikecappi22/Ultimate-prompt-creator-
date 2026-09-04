@@ -20,67 +20,12 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import base64
 
           files = [Path('index.html'), Path('prompt-v8-mobile.html')]
           marker = '/* V8.2 BUBBLE UI */'
-          bubble_css = r'''
-/* V8.2 BUBBLE UI */
-:root{
-  --bubble-blue:#2563eb;
-  --bubble-blue-dark:#1d4ed8;
-  --bubble-green:#16a34a;
-  --bubble-green-dark:#15803d;
-  --bubble-purple:#7c3aed;
-  --bubble-red:#dc2626;
-  --bubble-amber:#d97706;
-  --bubble-cyan:#0891b2;
-  --bubble-pink:#db2777;
-}
-.card{border-radius:22px;padding:14px;box-shadow:0 5px 18px rgba(23,32,51,.055)}
-textarea,input,select{border-radius:16px;padding:11px 13px;transition:border-color .18s ease,box-shadow .18s ease}
-textarea:focus,input:focus,select:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 4px rgba(59,130,246,.12)}
-button{
-  border-radius:999px;
-  min-height:42px;
-  padding:10px 16px;
-  font-weight:800;
-  letter-spacing:.01em;
-  box-shadow:0 3px 10px rgba(23,32,51,.10);
-  transition:transform .14s ease,box-shadow .14s ease,filter .14s ease;
-}
-button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,32,51,.14);filter:brightness(.99)}
-button:active{transform:translateY(0) scale(.98);box-shadow:0 2px 7px rgba(23,32,51,.10)}
-.primary{background:linear-gradient(135deg,var(--bubble-blue),var(--bubble-blue-dark));color:#fff}
-.add{background:linear-gradient(135deg,#22c55e,var(--bubble-green));color:#fff;min-width:74px}
-.secondary{background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe}
-.remove{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;box-shadow:none}
-#addManual{background:linear-gradient(135deg,#22c55e,var(--bubble-green-dark));color:#fff}
-.quick{gap:8px;margin-top:10px}
-.quick button{min-height:36px;padding:8px 13px;box-shadow:none;border:1px solid transparent}
-.quick button:nth-child(7n+1){background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
-.quick button:nth-child(7n+2){background:#ede9fe;color:#6d28d9;border-color:#ddd6fe}
-.quick button:nth-child(7n+3){background:#dcfce7;color:#15803d;border-color:#bbf7d0}
-.quick button:nth-child(7n+4){background:#ffedd5;color:#c2410c;border-color:#fed7aa}
-.quick button:nth-child(7n+5){background:#fce7f3;color:#be185d;border-color:#fbcfe8}
-.quick button:nth-child(7n+6){background:#cffafe;color:#0e7490;border-color:#a5f3fc}
-.quick button:nth-child(7n){background:#fef3c7;color:#b45309;border-color:#fde68a}
-.chip{border-radius:999px;padding:4px 8px;background:#eef2ff;color:#4f46e5;border:1px solid #e0e7ff;font-weight:700}
-.result{border:1px solid #e6ebf2!important;border-radius:18px;padding:12px;margin:9px 0;background:#fff;box-shadow:0 3px 12px rgba(23,32,51,.04)}
-.result:last-child{border-bottom:1px solid #e6ebf2!important}
-.stage{border-radius:18px;border-color:#dfe6ef;background:#fff}
-.stagehead{background:linear-gradient(90deg,#eef2ff,#f5f3ff);color:#4338ca;border-radius:17px 17px 0 0;padding:9px 12px}
-.item{padding:10px 12px}
-.src{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#64748b;font-weight:700}
-.badge{border-radius:999px;padding:5px 10px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
-.actions{gap:10px}
-.promptCard .primary{background:linear-gradient(135deg,#2563eb,#1e40af)}
-@media(max-width:680px){
-  button{min-height:44px}
-  .quick button{min-height:38px}
-  .result{grid-template-columns:minmax(0,1fr) auto;gap:8px}
-  .add{min-width:70px;padding-left:14px;padding-right:14px}
-}
-'''
+          css_b64 = 'LyogVjguMiBCVUJCTEUgVUkgKi8KOnJvb3R7CiAgLS1idWJibGUtYmx1ZTojMjU2M2ViOwogIC0tYnViYmxlLWJsdWUtZGFyazojMWQ0ZWQ4OwogIC0tYnViYmxlLWdyZWVuOiMxNmEzNGE7CiAgLS1idWJibGUtZ3JlZW4tZGFyazojMTU4MDNkOwogIC0tYnViYmxlLXB1cnBsZTojN2MzYWVkOwogIC0tYnViYmxlLXJlZDojZGMyNjI2OwogIC0tYnViYmxlLWFtYmVyOiNkOTc3MDY7CiAgLS1idWJibGUtY3lhbjojMDg5MWIyOwogIC0tYnViYmxlLXBpbms6I2RiMjc3NzsKfQouY2FyZHtib3JkZXItcmFkaXVzOjIycHg7cGFkZGluZzoxNHB4O2JveC1zaGFkb3c6MCA1cHggMThweCByZ2JhKDIzLDMyLDUxLC4wNTUpfQp0ZXh0YXJlYSxpbnB1dCxzZWxlY3R7Ym9yZGVyLXJhZGl1czoxNnB4O3BhZGRpbmc6MTFweCAxM3B4O3RyYW5zaXRpb246Ym9yZGVyLWNvbG9yIC4xOHMgZWFzZSxib3gtc2hhZG93IC4xOHMgZWFzZX0KdGV4dGFyZWE6Zm9jdXMsaW5wdXQ6Zm9jdXMsc2VsZWN0OmZvY3Vze291dGxpbmU6bm9uZTtib3JkZXItY29sb3I6IzkzYzVmZDtib3gtc2hhZG93OjAgMCAwIDRweCByZ2JhKDU5LDEzMCwyNDYsLjEyKX0KYnV0dG9uewogIGJvcmRlci1yYWRpdXM6OTk5cHg7CiAgbWluLWhlaWdodDo0MnB4OwogIHBhZGRpbmc6MTBweCAxNnB4OwogIGZvbnQtd2VpZ2h0OjgwMDsKICBsZXR0ZXItc3BhY2luZzouMDFlbTsKICBib3gtc2hhZG93OjAgM3B4IDEwcHggcmdiYSgyMywzMiw1MSwuMTApOwogIHRyYW5zaXRpb246dHJhbnNmb3JtIC4xNHMgZWFzZSxib3gtc2hhZG93IC4xNHMgZWFzZSxmaWx0ZXIgLjE0cyBlYXNlOwp9CmJ1dHRvbjpob3Zlcnt0cmFuc2Zvcm06dHJhbnNsYXRlWSgtMXB4KTtib3gtc2hhZG93OjAgNnB4IDE2cHggcmdiYSgyMywzMiw1MSwuMTQpO2ZpbHRlcjpicmlnaHRuZXNzKC45OSl9CmJ1dHRvbjphY3RpdmV7dHJhbnNmb3JtOnRyYW5zbGF0ZVkoMCkgc2NhbGUoLjk4KTtib3gtc2hhZG93OjAgMnB4IDdweCByZ2JhKDIzLDMyLDUxLC4xMCl9Ci5wcmltYXJ5e2JhY2tncm91bmQ6bGluZWFyLWdyYWRpZW50KDEzNWRlZyx2YXIoLS1idWJibGUtYmx1ZSksdmFyKC0tYnViYmxlLWJsdWUtZGFyaykpO2NvbG9yOiNmZmZ9Ci5hZGR7YmFja2dyb3VuZDpsaW5lYXItZ3JhZGllbnQoMTM1ZGVnLCMyMmM1NWUsdmFyKC0tYnViYmxlLWdyZWVuKSk7Y29sb3I6I2ZmZjttaW4td2lkdGg6NzRweH0KLnNlY29uZGFyeXtiYWNrZ3JvdW5kOiNlZGU5ZmU7Y29sb3I6IzViMjFiNjtib3JkZXI6MXB4IHNvbGlkICNkZGQ2ZmV9Ci5yZW1vdmV7YmFja2dyb3VuZDojZmVlMmUyO2NvbG9yOiNiOTFjMWM7Ym9yZGVyOjFweCBzb2xpZCAjZmVjYWNhO2JveC1zaGFkb3c6bm9uZX0KI2FkZE1hbnVhbHtiYWNrZ3JvdW5kOmxpbmVhci1ncmFkaWVudCgxMzVkZWcsIzIyYzU1ZSx2YXIoLS1idWJibGUtZ3JlZW4tZGFyaykpO2NvbG9yOiNmZmZ9Ci5xdWlja3tnYXA6OHB4O21hcmdpbi10b3A6MTBweH0KLnF1aWNrIGJ1dHRvbnttaW4taGVpZ2h0OjM2cHg7cGFkZGluZzo4cHggMTNweDtib3gtc2hhZG93Om5vbmU7Ym9yZGVyOjFweCBzb2xpZCB0cmFuc3BhcmVudH0KLnF1aWNrIGJ1dHRvbjpudGgtY2hpbGQoN24rMSl7YmFja2dyb3VuZDojZGJlYWZlO2NvbG9yOiMxZDRlZDg7Ym9yZGVyLWNvbG9yOiNiZmRiZmV9Ci5xdWljayBidXR0b246bnRoLWNoaWxkKDduKzIpe2JhY2tncm91bmQ6I2VkZTlmZTtjb2xvcjojNmQyOGQ5O2JvcmRlci1jb2xvcjojZGRkNmZlfQoucXVpY2sgYnV0dG9uOm50aC1jaGlsZCg3biszKXtiYWNrZ3JvdW5kOiNkY2ZjZTc7Y29sb3I6IzE1ODAzZDtib3JkZXItY29sb3I6I2JiZjdkMH0KLnF1aWNrIGJ1dHRvbjpudGgtY2hpbGQoN24rNCl7YmFja2dyb3VuZDojZmZlZGQ1O2NvbG9yOiNjMjQxMGM7Ym9yZGVyLWNvbG9yOiNmZWQ3YWF9Ci5xdWljayBidXR0b246bnRoLWNoaWxkKDduKzUpe2JhY2tncm91bmQ6I2ZjZTdmMztjb2xvcjojYmUxODVkO2JvcmRlci1jb2xvcjojZmJjZmU4fQoucXVpY2sgYnV0dG9uOm50aC1jaGlsZCg3bis2KXtiYWNrZ3JvdW5kOiNjZmZhZmU7Y29sb3I6IzBlNzQ5MDtib3JkZXItY29sb3I6I2E1ZjNmY30KLnF1aWNrIGJ1dHRvbjpudGgtY2hpbGQoN24pe2JhY2tncm91bmQ6I2ZlZjNjNztjb2xvcjojYjQ1MzA5O2JvcmRlci1jb2xvcjojZmRlNjhhfQouY2hpcHtib3JkZXItcmFkaXVzOjk5OXB4O3BhZGRpbmc6NHB4IDhweDtiYWNrZ3JvdW5kOiNlZWYyZmY7Y29sb3I6IzRmNDZlNTtib3JkZXI6MXB4IHNvbGlkICNlMGU3ZmY7Zm9udC13ZWlnaHQ6NzAwfQoucmVzdWx0e2JvcmRlcjoxcHggc29saWQgI2U2ZWJmMiFpbXBvcnRhbnQ7Ym9yZGVyLXJhZGl1czoxOHB4O3BhZGRpbmc6MTJweDttYXJnaW46OXB4IDA7YmFja2dyb3VuZDojZmZmO2JveC1zaGFkb3c6MCAzcHggMTJweCByZ2JhKDIzLDMyLDUxLC4wNCl9Ci5yZXN1bHQ6bGFzdC1jaGlsZHtib3JkZXItYm90dG9tOjFweCBzb2xpZCAjZTZlYmYyIWltcG9ydGFudH0KLnN0YWdle2JvcmRlci1yYWRpdXM6MThweDtib3JkZXItY29sb3I6I2RmZTZlZjtiYWNrZ3JvdW5kOiNmZmZ9Ci5zdGFnZWhlYWR7YmFja2dyb3VuZDpsaW5lYXItZ3JhZGllbnQoOTBkZWcsI2VlZjJmZiwjZjVmM2ZmKTtjb2xvcjojNDMzOGNhO2JvcmRlci1yYWRpdXM6MTdweCAxN3B4IDAgMDtwYWRkaW5nOjlweCAxMnB4fQouaXRlbXtwYWRkaW5nOjEwcHggMTJweH0KLnNyY3tkaXNwbGF5OmlubGluZS1ibG9jazttYXJnaW4tdG9wOjZweDtwYWRkaW5nOjNweCA4cHg7Ym9yZGVyLXJhZGl1czo5OTlweDtiYWNrZ3JvdW5kOiNmMWY1Zjk7Y29sb3I6IzY0NzQ4Yjtmb250LXdlaWdodDo3MDB9Ci5iYWRnZXtib3JkZXItcmFkaXVzOjk5OXB4O3BhZGRpbmc6NXB4IDEwcHg7YmFja2dyb3VuZDojZTBmMmZlO2NvbG9yOiMwMzY5YTE7Ym9yZGVyOjFweCBzb2xpZCAjYmFlNmZkfQouYWN0aW9uc3tnYXA6MTBweH0KLnByb21wdENhcmQgLnByaW1hcnl7YmFja2dyb3VuZDpsaW5lYXItZ3JhZGllbnQoMTM1ZGVnLCMyNTYzZWIsIzFlNDBhZil9CkBtZWRpYShtYXgtd2lkdGg6NjgwcHgpewogIGJ1dHRvbnttaW4taGVpZ2h0OjQ0cHh9CiAgLnF1aWNrIGJ1dHRvbnttaW4taGVpZ2h0OjM4cHh9CiAgLnJlc3VsdHtngcmlkLXRlbXBsYXRlLWNvbHVtbnM6bWlubWF4KDAsMWZyKSBhdXRvO2dhcDo4cHh9CiAgLmFkZHttaW4td2lkdGg6NzBweDtwYWRkaW5nLWxlZnQ6MTRweDtwYWRkaW5nLXJpZ2h0OjE0cHh9Cn0K'
+          bubble_css = base64.b64decode(css_b64).decode('utf-8')
 
           for p in files:
               text = p.read_text(encoding='utf-8')
