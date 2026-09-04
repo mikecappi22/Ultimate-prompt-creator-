@@ -1,0 +1,94 @@
+name: Enable V9 Creative Studio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - creative-studio-v90-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v90:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify V9 payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/v90-checksums.txt <<'EOF'
+          18850db55f3aa22b1c6035d0000dc4f4a47ea1da49a871d65cc2069122dabf49  v90/payload/creative-studio-v90.js.payload01.txt
+          ae93fc5bd7bca2035422f219609c494bfce0069c0eb12d7a61d3b49b1a817b51  v90/payload/creative-studio-v90.js.payload02.txt
+          c519fd8bf07abb6b0de714bc4d517be20c2d430c615c275b7f23c16485577287  v90/payload/creative-studio-v90.js.payload03.txt
+          77f252f98a6f534055a21a0b8e6a1abcb526174c63a8fdfedb55bc2dbbb383fe  v90/payload/creative-studio-v90.js.payload04.txt
+          379e6efd40ea76ce596dd9334f8ab2f749a13e7941da5e1b18662e3cc47814b8  v90/payload/creative-studio-v90.js.payload05.txt
+          1343448a55e526ec48f833d94b6ec6c7bb222ebc7264437c2b8a5758943eebc1  v90/payload/creative-studio-v90.js.payload06.txt
+          177c3518922413b71eac154c9836929ca0ba2f11caeff102a94c09444730c0d0  v90/payload/creative-studio-v90.js.payload07.txt
+          ba36542df2e77a3408503ce122f9b0ddf58d666db79737041680e0b6e539378a  v90/payload/creative-studio-v90.js.payload08.txt
+          d6cd292685f23a7a6de22c9bb63b48f22a6331fe174237ff4ba0e44d0a24e875  v90/payload/creative-studio-v90.css.payload01.txt
+          EOF
+          sha256sum -c /tmp/v90-checksums.txt
+
+      - name: Reconstruct V9 Creative Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat v90/payload/creative-studio-v90.js.payload{01..08}.txt | tr -d '\r\n' | base64 -d > /tmp/creative-studio-v90.js.gz
+          gzip -dc /tmp/creative-studio-v90.js.gz > creative-studio-v90.js
+          cat v90/payload/creative-studio-v90.css.payload01.txt | tr -d '\r\n' | base64 -d > /tmp/creative-studio-v90.css.gz
+          gzip -dc /tmp/creative-studio-v90.css.gz > creative-studio-v90.css
+          echo '39b9f89382f73fbe2dbea18f4e6cf6838a5f1bad41e6bfd51a79d6f7c01c60ad  creative-studio-v90.js' | sha256sum -c -
+          echo '0994efaa150a5167d6673b7f5fa5ec3993b3af92f9d3a130709428f0722b0fa8  creative-studio-v90.css' | sha256sum -c -
+          node --check creative-studio-v90.js
+
+      - name: Attach V9 to generator
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          files=[Path('index.html'),Path('prompt-v8-mobile.html')]
+          css='<link rel="stylesheet" href="creative-studio-v90.css?v=20260904-v90">'
+          js='<script src="creative-studio-v90.js?v=20260904-v90"></script>'
+          for p in files:
+              text=p.read_text(encoding='utf-8')
+              if css not in text:
+                  text=text.replace('</head>',css+'\n</head>',1)
+              if js not in text:
+                  text=text.replace('</body>',js+'\n</body>',1)
+              text=text.replace('<title>Ultimate Prompt Creator V8.2 Bubble UI</title>','<title>Ultimate Prompt Creator V9 Creative Studio</title>')
+              text=text.replace('<title>Ultimate Prompt Creator V8.3 Smart Builder</title>','<title>Ultimate Prompt Creator V9 Creative Studio</title>')
+              text=text.replace('<span class="badge">V8.2 BUBBLE UI</span>','<span class="badge">V9.0 CREATIVE STUDIO</span>')
+              text=text.replace('<span class="badge">V8.3 SMART BUILDER</span>','<span class="badge">V9.0 CREATIVE STUDIO</span>')
+              p.write_text(text,encoding='utf-8')
+              print(f'{p}: V9 attached')
+          PY
+
+      - name: Validate V9 deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'creative-studio-v90.css?v=20260904-v90' index.html
+          grep -Fq 'creative-studio-v90.js?v=20260904-v90' index.html
+          grep -Fq 'creative-studio-v90.css?v=20260904-v90' prompt-v8-mobile.html
+          grep -Fq 'creative-studio-v90.js?v=20260904-v90' prompt-v8-mobile.html
+          grep -Fq 'V9.0 CREATIVE STUDIO' creative-studio-v90.js
+          grep -Fq 'Photo Forensics' creative-studio-v90.js
+          node --check creative-studio-v90.js
+          git diff --check
+
+      - name: Commit V9 Creative Studio
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git ls-files --error-unmatch creative-studio-v90.js creative-studio-v90.css >/dev/null 2>&1; then
+            echo 'V9 already deployed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add creative-studio-v90.js creative-studio-v90.css index.html prompt-v8-mobile.html
+          git commit -m 'Add V9 no-key Creative Studio'
+          git push
