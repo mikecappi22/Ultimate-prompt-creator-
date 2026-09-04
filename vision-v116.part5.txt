@@ -1,0 +1,2 @@
+c_vision_transfer_v112',JSON.stringify(payload))}catch(_){}setStatus('Selected prompt sent to main generator.','good')};chooseModels();
+</script></body></html>
