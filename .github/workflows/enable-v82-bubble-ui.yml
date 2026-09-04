@@ -1,0 +1,118 @@
+name: Enable V8.2 Bubble UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - bubble-ui-v82-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  patch-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch Bubble UI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [Path('index.html'), Path('prompt-v8-mobile.html')]
+          marker = '/* V8.2 BUBBLE UI */'
+          bubble_css = r'''
+/* V8.2 BUBBLE UI */
+:root{
+  --bubble-blue:#2563eb;
+  --bubble-blue-dark:#1d4ed8;
+  --bubble-green:#16a34a;
+  --bubble-green-dark:#15803d;
+  --bubble-purple:#7c3aed;
+  --bubble-red:#dc2626;
+  --bubble-amber:#d97706;
+  --bubble-cyan:#0891b2;
+  --bubble-pink:#db2777;
+}
+.card{border-radius:22px;padding:14px;box-shadow:0 5px 18px rgba(23,32,51,.055)}
+textarea,input,select{border-radius:16px;padding:11px 13px;transition:border-color .18s ease,box-shadow .18s ease}
+textarea:focus,input:focus,select:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 4px rgba(59,130,246,.12)}
+button{
+  border-radius:999px;
+  min-height:42px;
+  padding:10px 16px;
+  font-weight:800;
+  letter-spacing:.01em;
+  box-shadow:0 3px 10px rgba(23,32,51,.10);
+  transition:transform .14s ease,box-shadow .14s ease,filter .14s ease;
+}
+button:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(23,32,51,.14);filter:brightness(.99)}
+button:active{transform:translateY(0) scale(.98);box-shadow:0 2px 7px rgba(23,32,51,.10)}
+.primary{background:linear-gradient(135deg,var(--bubble-blue),var(--bubble-blue-dark));color:#fff}
+.add{background:linear-gradient(135deg,#22c55e,var(--bubble-green));color:#fff;min-width:74px}
+.secondary{background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe}
+.remove{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;box-shadow:none}
+#addManual{background:linear-gradient(135deg,#22c55e,var(--bubble-green-dark));color:#fff}
+.quick{gap:8px;margin-top:10px}
+.quick button{min-height:36px;padding:8px 13px;box-shadow:none;border:1px solid transparent}
+.quick button:nth-child(7n+1){background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
+.quick button:nth-child(7n+2){background:#ede9fe;color:#6d28d9;border-color:#ddd6fe}
+.quick button:nth-child(7n+3){background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.quick button:nth-child(7n+4){background:#ffedd5;color:#c2410c;border-color:#fed7aa}
+.quick button:nth-child(7n+5){background:#fce7f3;color:#be185d;border-color:#fbcfe8}
+.quick button:nth-child(7n+6){background:#cffafe;color:#0e7490;border-color:#a5f3fc}
+.quick button:nth-child(7n){background:#fef3c7;color:#b45309;border-color:#fde68a}
+.chip{border-radius:999px;padding:4px 8px;background:#eef2ff;color:#4f46e5;border:1px solid #e0e7ff;font-weight:700}
+.result{border:1px solid #e6ebf2!important;border-radius:18px;padding:12px;margin:9px 0;background:#fff;box-shadow:0 3px 12px rgba(23,32,51,.04)}
+.result:last-child{border-bottom:1px solid #e6ebf2!important}
+.stage{border-radius:18px;border-color:#dfe6ef;background:#fff}
+.stagehead{background:linear-gradient(90deg,#eef2ff,#f5f3ff);color:#4338ca;border-radius:17px 17px 0 0;padding:9px 12px}
+.item{padding:10px 12px}
+.src{display:inline-block;margin-top:6px;padding:3px 8px;border-radius:999px;background:#f1f5f9;color:#64748b;font-weight:700}
+.badge{border-radius:999px;padding:5px 10px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
+.actions{gap:10px}
+.promptCard .primary{background:linear-gradient(135deg,#2563eb,#1e40af)}
+@media(max-width:680px){
+  button{min-height:44px}
+  .quick button{min-height:38px}
+  .result{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+  .add{min-width:70px;padding-left:14px;padding-right:14px}
+}
+'''
+
+          for p in files:
+              text = p.read_text(encoding='utf-8')
+              if marker not in text:
+                  if '</style>' not in text:
+                      raise SystemExit(f'{p}: closing style tag not found')
+                  text = text.replace('</style>', bubble_css + '\n</style>', 1)
+              text = text.replace('<title>Ultimate Prompt Creator V8.1 Camera</title>', '<title>Ultimate Prompt Creator V8.2 Bubble UI</title>')
+              text = text.replace('<span class="badge">V8.1 CAMERA</span>', '<span class="badge">V8.2 BUBBLE UI</span>')
+              p.write_text(text, encoding='utf-8')
+              print(f'{p}: bubble UI ready')
+          PY
+
+      - name: Validate Bubble UI
+        shell: bash
+        run: |
+          grep -Fq '/* V8.2 BUBBLE UI */' index.html
+          grep -Fq 'V8.2 BUBBLE UI' index.html
+          grep -Fq 'border-radius:999px' index.html
+          grep -Fq 'V8.2 BUBBLE UI' prompt-v8-mobile.html
+          grep -Fq 'camera-addon-v81.part${n}.txt' index.html
+          git diff --check
+
+      - name: Commit Bubble UI
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No Bubble UI changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Add V8.2 colorful bubble UI'
+          git push
