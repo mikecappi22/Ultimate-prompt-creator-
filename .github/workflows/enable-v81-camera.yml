@@ -1,0 +1,117 @@
+name: Enable V8.1 Camera Database
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - camera-v81-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  patch-generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch Ultimate Prompt Creator
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [Path('index.html'), Path('prompt-v8-mobile.html')]
+
+          old_loader = '''   const res=await fetch("db-v8-mobile.json?v=20260828-1255",{cache:"no-store"});
+             if(!res.ok)throw new Error("Database HTTP "+res.status);
+             META=await res.json();
+             META.sources.forEach(s=>$("source").add(new Option(s,s)));'''
+
+          new_loader = '''   const res=await fetch("db-v8-mobile.json?v=20260904-camera-v81",{cache:"no-store"});
+             if(!res.ok)throw new Error("Database HTTP "+res.status);
+             META=await res.json();
+
+             // V8.1 modular camera/cinematography add-on. Keep the large master DB untouched.
+             try{
+               const camPartUrls=[1,2,3,4,5].map(n=>`camera-addon-v81.part${n}.txt?v=20260904-camera-v81`);
+               const camPartResponses=await Promise.all(camPartUrls.map(u=>fetch(u,{cache:"no-store"})));
+               const badPart=camPartResponses.find(r=>!r.ok);
+               if(badPart)throw new Error("Camera add-on HTTP "+badPart.status);
+               if(typeof DecompressionStream!=="function")throw new Error("This browser does not support the camera add-on decompressor.");
+               const packed=(await Promise.all(camPartResponses.map(r=>r.text()))).join("").trim();
+               const packedBytes=Uint8Array.from(atob(packed),c=>c.charCodeAt(0));
+               const unpacked=new Blob([packedBytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+               const cam=JSON.parse(await new Response(unpacked).text());
+               if(!META.sources.includes(cam.name)){
+                 const srcIndex=META.sources.length;
+                 META.sources.push(cam.name);
+                 let stageIndex=META.stages.indexOf(cam.stage);
+                 if(stageIndex<0)stageIndex=Math.min(5,META.stages.length-1);
+                 const slug=s=>String(s||"").toUpperCase().replace(/[^A-Z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+                 for(const [category,rows] of Object.entries(cam.groups||{})){
+                   for(const r of rows){
+                     const media=r[2]||"Both";
+                     const stableId=`CAM_${slug(category)}_${slug(r[0])}`;
+                     const ctx=`ID:${stableId} | Category:${category} | Media:${media}`;
+                     META.records.push([srcIndex,stageIndex,r[0],r[1],ctx]);
+                   }
+                 }
+                 META.count=META.records.length;
+               }
+             }catch(cameraErr){
+               console.warn("Camera add-on failed to load; base database remains available.",cameraErr);
+               META.count=META.records.length;
+             }
+
+             META.sources.forEach(s=>$("source").add(new Option(s,s)));'''
+
+          for p in files:
+              text = p.read_text(encoding='utf-8')
+              if 'camera-addon-v81.part1.txt' in text:
+                  print(f'{p}: camera loader already present')
+                  continue
+
+              text = text.replace('<title>Ultimate Prompt Creator V7.1</title>', '<title>Ultimate Prompt Creator V8.1 Camera</title>')
+              text = text.replace('<span class="badge">V8 MOBILE</span>', '<span class="badge">V8.1 CAMERA</span>')
+              text = text.replace('41,829 prompt choices · mobile-optimized loading', '42,672 prompt choices · includes 843 Camera / Cinematography / Film terms · mobile-optimized loading')
+              text = text.replace(
+                  '<input id="search" type="search" placeholder="Try: red nails, sage green, 85mm f/2.8, high ponytail, contrapposto…" disabled>',
+                  '<div class="help" style="margin-bottom:6px">New: choose <b>Camera Angles + Cinematography + Film</b> from Database to browse shot sizes, angles, lenses, movements, tricks, film stocks, formats, transitions, frame rates, and more.</div>\n  <input id="search" type="search" placeholder="Try: 85mm lens, dolly zoom, Super 8, Dutch angle, handheld, high ponytail…" disabled>'
+              )
+              text = text.replace(
+                  '<button data-q="red nails">red nails</button><button data-q="green">green</button><button data-q="85mm f/2.8">85mm f/2.8</button><button data-q="contrapposto">contrapposto</button><button data-q="skin pores">skin pores</button><button data-q="high ponytail">high ponytail</button><button data-q="warm smile">warm smile</button><button data-q="volleyball spandex shorts">volleyball shorts</button>',
+                  '<button data-q="85mm lens">85mm lens</button><button data-q="dolly zoom">dolly zoom</button><button data-q="Super 8">Super 8</button><button data-q="Dutch angle">Dutch angle</button><button data-q="handheld">handheld</button><button data-q="skin pores">skin pores</button><button data-q="high ponytail">high ponytail</button><button data-q="warm smile">warm smile</button><button data-q="volleyball spandex shorts">volleyball shorts</button>'
+              )
+
+              if old_loader not in text:
+                  raise SystemExit(f'{p}: expected V8 loader block not found')
+              text = text.replace(old_loader, new_loader, 1)
+              text = text.replace(
+                  'V7.2 database failed to load.</div><div class="help">Make sure <b>db-v8-mobile.json</b> was uploaded beside this HTML file in GitHub.',
+                  'V8.1 database failed to load.</div><div class="help">Make sure <b>db-v8-mobile.json</b> and camera add-on parts 1–5 are beside this HTML file in GitHub.'
+              )
+              p.write_text(text, encoding='utf-8')
+              print(f'{p}: patched')
+          PY
+
+      - name: Validate patched files
+        shell: bash
+        run: |
+          grep -q 'V8.1 CAMERA' index.html
+          grep -q 'camera-addon-v81.part1.txt' index.html
+          grep -q 'camera-addon-v81.part5.txt' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V8.1 camera integration
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No HTML changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Enable V8.1 camera cinematography database'
+          git push
