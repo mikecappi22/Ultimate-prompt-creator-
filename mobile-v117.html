@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Ultimate Prompt Creator V11.7 Mobile</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#64748b;--line:#dbe3ee;--blue:#2563eb;--green:#15803d;--red:#b91c1c;--purple:#6d28d9;--amber:#b45309}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:14px 10px calc(90px + env(safe-area-inset-bottom))}.wrap{max-width:760px;margin:auto}.hero{background:linear-gradient(135deg,#172033,#334155);color:#fff;border-radius:24px;padding:18px;margin-bottom:12px}.hero h1{margin:0;font-size:24px}.hero p{margin:7px 0 0;color:#dbeafe;font-size:13px;line-height:1.45}.badge{display:inline-block;margin-top:10px;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:900}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:14px;margin:10px 0;box-shadow:0 6px 18px rgba(15,23,42,.04)}h2{font-size:17px;margin:0 0 8px}.small,.status{font-size:12px;color:var(--muted);line-height:1.45}label{display:block;font-size:13px;font-weight:800;margin:9px 0 6px}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:12px;color:var(--ink);font-size:16px}button,.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:999px;padding:12px 15px;font-weight:850;text-decoration:none;cursor:pointer;min-height:46px}.primary{background:var(--blue);color:#fff}.secondary{background:#ede9fe;color:#5b21b6}.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.full{grid-column:1/-1}.mode{border:1px solid #dbe3ee;border-radius:18px;padding:12px;margin-top:10px}.mode.recommended{border-color:#86efac;background:#f0fdf4}.ok{color:var(--green);font-weight:800}.bad{color:var(--red);font-weight:800}.warn{color:var(--amber);font-weight:800}.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0f172a;color:#e2e8f0;border-radius:14px;padding:10px;font-size:12px;overflow-wrap:anywhere;white-space:pre-wrap;margin:7px 0}.step{display:flex;gap:10px;align-items:flex-start;margin:9px 0}.num{flex:0 0 27px;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#dbeafe;color:#1d4ed8;font-weight:900;font-size:12px}.launch{position:sticky;bottom:8px;z-index:20;background:rgba(244,247,251,.92);backdrop-filter:blur(10px);padding:8px;border-radius:20px;border:1px solid var(--line)}.launch .actions{margin:0}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px;font-weight:800}.models{margin-top:7px;font-size:12px;color:#475569;line-height:1.5}@media(max-width:520px){.actions{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero"><h1>Ultimate Prompt Creator Mobile</h1><p>Connect your iPhone securely to Ollama running on your Windows PC, then use the Fast Creative Director and Fast Vision Lab from mobile.</p><span class="badge">V11.7 MOBILE</span></div>
+
+  <div class="card">
+    <h2>1. Choose mobile connection</h2>
+    <div class="mode recommended"><b>🔒 Secure HTTPS — Recommended</b><div class="small">Use Tailscale Serve. Your Ollama endpoint stays private inside your Tailscale network and your iPhone gets an HTTPS URL that Safari can call from the GitHub-hosted app.</div></div>
+    <div class="mode"><b>🏠 Same-Wi-Fi LAN — Advanced</b><div class="small">Use <code>http://192.168.x.x:11434</code>. This may be blocked by iOS/Safari when the Prompt Creator itself is loaded over HTTPS, so use this mainly for testing.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>2. PC secure setup</h2>
+    <div class="small">On your Windows PC, install Tailscale and sign in. Install the Tailscale app on your iPhone and sign into the same account.</div>
+    <div class="step"><span class="num">1</span><div><b>Keep Ollama private on the PC</b><div class="code">[Environment]::SetEnvironmentVariable("OLLAMA_HOST","127.0.0.1:11434","User")</div><div class="small">Then fully quit Ollama and reopen it.</div></div></div>
+    <div class="step"><span class="num">2</span><div><b>Expose Ollama only to your Tailscale network</b><div class="code">tailscale serve --bg 11434</div></div></div>
+    <div class="step"><span class="num">3</span><div><b>Find your private HTTPS address</b><div class="code">tailscale serve status</div><div class="small">Copy the HTTPS address it shows, such as <code>https://my-pc.example.ts.net</code>.</div></div></div>
+  </div>
+
+  <div class="card">
+    <h2>3. Save your Ollama endpoint</h2>
+    <label>Secure PC endpoint</label>
+    <input id="endpoint" inputmode="url" autocapitalize="none" autocomplete="off" placeholder="https://your-pc.your-tailnet.ts.net">
+    <div class="actions"><button id="save" class="secondary">Save Endpoint</button><button id="test" class="primary">Test Connection</button></div>
+    <div id="status" class="status" style="margin-top:9px">No connection test yet.</div>
+    <div id="models" class="models"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. Mobile defaults</h2>
+    <label>Creative Director default</label><select id="directorProfile"><option value="turbo" selected>⚡ Turbo — fastest</option><option value="balanced">Balanced</option><option value="maximum">Maximum</option></select>
+    <label>Vision default</label><select id="visionProfile"><option value="turbo" selected>⚡ Turbo — fastest</option><option value="balanced">Balanced</option><option value="extreme">Extreme</option></select>
+    <div class="small">These settings are saved on your iPhone. Turbo is recommended for mobile because the heavy model still runs on the PC.</div>
+  </div>
+
+  <div class="launch"><div class="actions"><a class="btn primary" href="prompt-mobile-v117.html">✨ Open Prompt Builder</a><a class="btn success" href="vision-mobile-v117.html">📷 Open Mobile Vision</a></div></div>
+</div>
+<script>
+'use strict';
+const EP='upc_mobile_ollama_endpoint_v117',DP='upc_mobile_director_profile_v117',VP='upc_mobile_vision_profile_v117';
+const $=id=>document.getElementById(id);
+function load(){try{$('endpoint').value=localStorage.getItem(EP)||'';$('directorProfile').value=localStorage.getItem(DP)||'turbo';$('visionProfile').value=localStorage.getItem(VP)||'turbo'}catch(_){}}
+function save(){const ep=$('endpoint').value.trim().replace(/\/$/,'');try{localStorage.setItem(EP,ep);localStorage.setItem(DP,$('directorProfile').value);localStorage.setItem(VP,$('visionProfile').value)}catch(_){ } $('status').textContent=ep?'Saved. You can now test the connection.':'Enter your PC endpoint first.';$('status').className='status '+(ep?'ok':'bad')}
+async function test(){save();const ep=$('endpoint').value.trim().replace(/\/$/,'');if(!ep)return;$('status').textContent='Testing '+ep+' …';$('status').className='status';$('models').textContent='';try{const ac=new AbortController(),to=setTimeout(()=>ac.abort(),12000);const r=await fetch(ep+'/api/tags',{cache:'no-store',signal:ac.signal});clearTimeout(to);if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json(),names=(j.models||[]).map(x=>x.name||x.model).filter(Boolean);$('status').textContent='Connected to Ollama on your PC.';$('status').className='status ok';$('models').innerHTML='<b>Models available:</b><br>'+names.map(x=>'• '+x).join('<br>')}catch(e){$('status').textContent='Connection failed: '+(e.name==='AbortError'?'timed out after 12 seconds':e.message);$('status').className='status bad';$('models').innerHTML='<span class="warn">If you are using Tailscale, confirm the iPhone Tailscale app is connected and the endpoint starts with https://.</span>'}}
+$('save').onclick=save;$('test').onclick=test;$('directorProfile').onchange=save;$('visionProfile').onchange=save;load();
+</script>
+</body></html>
