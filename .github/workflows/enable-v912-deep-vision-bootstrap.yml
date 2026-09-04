@@ -1,0 +1,62 @@
+name: Enable V9.1.2 Persistent Deep Vision
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - v912-bootstrap-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v912:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate persistent Deep Vision bootstrap
+        shell: bash
+        run: |
+          node --check deep-vision-bootstrap-v912.js
+          grep -Fq "MutationObserver" deep-vision-bootstrap-v912.js
+          grep -Fq "deep-vision-v91.js?v=20260904-v912-runtime" deep-vision-bootstrap-v912.js
+
+      - name: Attach persistent bootstrap
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tag='<script src="deep-vision-bootstrap-v912.js?v=20260904-v912"></script>'
+          deep='<script src="deep-vision-v91.js?v=20260904-v91"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if tag not in text:
+                  if deep in text:
+                      text=text.replace(deep, deep+'\n'+tag, 1)
+                  else:
+                      text=text.replace('</body></html>', tag+'\n</body></html>')
+              p.write_text(text,encoding='utf-8')
+              print(name,'patched')
+          PY
+
+      - name: Validate page attachment
+        shell: bash
+        run: |
+          grep -Fq 'deep-vision-bootstrap-v912.js?v=20260904-v912' index.html
+          grep -Fq 'deep-vision-bootstrap-v912.js?v=20260904-v912' prompt-v8-mobile.html
+          git diff --check
+
+      - name: Commit V9.1.2 bootstrap
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No V9.1.2 page changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Make V9.1 Deep Vision initialize reliably on slow loads'
+          git push
