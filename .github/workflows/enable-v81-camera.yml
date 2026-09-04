@@ -68,7 +68,7 @@ jobs:
 
           for p in files:
               text = p.read_text(encoding='utf-8')
-              if 'camera-addon-v81.part1.txt' in text:
+              if 'camera-addon-v81.part${n}.txt' in text:
                   print(f'{p}: camera loader already present')
                   continue
 
@@ -99,8 +99,9 @@ jobs:
         shell: bash
         run: |
           grep -q 'V8.1 CAMERA' index.html
-          grep -q 'camera-addon-v81.part1.txt' index.html
-          grep -q 'camera-addon-v81.part5.txt' prompt-v8-mobile.html
+          grep -Fq 'camera-addon-v81.part${n}.txt' index.html
+          grep -Fq 'camera-addon-v81.part${n}.txt' prompt-v8-mobile.html
+          grep -q '42,672 prompt choices' index.html
           git diff --check
 
       - name: Commit V8.1 camera integration
