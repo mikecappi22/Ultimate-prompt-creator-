@@ -1,0 +1,70 @@
+name: Enable V11 Stable Studio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - v110-stable-studio-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v110:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tested V11 files
+        shell: bash
+        run: |
+          node --check studio-lite-v110.js
+          node --check feature-loader-v110.js
+          grep -Fq 'V11.0 STABLE STUDIO' studio-lite-v110.js
+          grep -Fq 'No API key, no TensorFlow, no CLIP, no model download.' studio-lite-v110.js
+          test -f vision-lab-v110.html
+
+      - name: Switch main pages to V11 stable Studio
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              text=text.replace('<script src="feature-loader-v101.js?v=20260904-v101"></script>','<script src="feature-loader-v110.js?v=20260904-v110"></script>')
+              text=text.replace('Ultimate Prompt Creator V10.1 Interactive Core','Ultimate Prompt Creator V11 Stable Studio')
+              text=text.replace('Ultimate Prompt Creator V10 Stable Worker','Ultimate Prompt Creator V11 Stable Studio')
+              text=text.replace('<span class="badge">V10.0 STABLE WORKER</span>','<span class="badge">V11.0 STABLE STUDIO</span>')
+              text=text.replace('<link rel="stylesheet" href="creative-studio-v90.css?v=20260904-v90">\n','')
+              text=text.replace('<strong>Stable worker architecture active.</strong> The database now loads and searches off the main page thread.','<strong>Stable worker + lightweight Studio active.</strong> Database work stays off the main thread, and Creative Studio uses no heavy vision models in this page.')
+              p.write_text(text,encoding='utf-8')
+              print(name,'patched to V11')
+          PY
+
+      - name: Validate live page architecture
+        shell: bash
+        run: |
+          grep -Fq 'core-worker-v101.js?v=20260904-v101' index.html
+          grep -Fq 'feature-loader-v110.js?v=20260904-v110' index.html
+          grep -Fq 'core-worker-v101.js?v=20260904-v101' prompt-v8-mobile.html
+          grep -Fq 'feature-loader-v110.js?v=20260904-v110' prompt-v8-mobile.html
+          ! grep -Fq 'feature-loader-v101.js' index.html
+          ! grep -Fq 'feature-loader-v101.js' prompt-v8-mobile.html
+          ! grep -Fq 'creative-studio-v90.js' index.html
+          ! grep -Fq 'deep-vision-v91.js' index.html
+          ! grep -Fq 'photo-forensics-v92.js' index.html
+          git diff --check
+
+      - name: Commit V11 stable Studio
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No V11 changes needed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Replace heavy Creative Studio stack with V11 lightweight tested Studio'
+          git push
