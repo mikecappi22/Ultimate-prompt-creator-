@@ -1,0 +1,45 @@
+name: Enable V9.3 Version Badge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - version-badge-v93-trigger.txt
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-v93-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate badge script
+        run: |
+          node --check version-badge-v93.js
+          grep -Fq 'V9.3 FAST DATABASE' version-badge-v93.js
+      - name: Attach badge script last
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          tag='<script src="version-badge-v93.js?v=20260904-v93"></script>'
+          for name in ['index.html','prompt-v8-mobile.html']:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if tag not in text:
+                  text=text.replace('</body></html>', tag+'\n</body></html>')
+              p.write_text(text,encoding='utf-8')
+          PY
+      - name: Validate pages
+        run: |
+          grep -Fq 'version-badge-v93.js?v=20260904-v93' index.html
+          grep -Fq 'version-badge-v93.js?v=20260904-v93' prompt-v8-mobile.html
+          git diff --check
+      - name: Commit version badge
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html prompt-v8-mobile.html
+          git commit -m 'Show V9.3 fast database badge'
+          git push
