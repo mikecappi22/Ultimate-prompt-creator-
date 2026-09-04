@@ -1,8 +1,8 @@
 (function(){
 'use strict';
-const VERSION='V11.5 STAGED AI DIRECTOR';
+const VERSION='V11.6 FAST PIPELINES';
 let lastTransferTs=0;
-function setVersion(){const b=document.querySelector('.badge');if(b)b.textContent=VERSION;document.title='Ultimate Prompt Creator V11.5 Staged AI Director';}
+function setVersion(){const b=document.querySelector('.badge');if(b)b.textContent=VERSION;document.title='Ultimate Prompt Creator V11.6 Fast Pipelines';}
 function load(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src.includes(src.split('?')[0])))return res();const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('Failed to load '+src));document.body.appendChild(s)})}
 function appendVisionTransfer(payload){
   if(!payload||payload.type!=='append-to-prompt'||!payload.text)return;
@@ -13,7 +13,7 @@ function appendVisionTransfer(payload){
   const base=String(p.value||'').replace(/\s+$/,'');
   p.value=base?base+', '+add:add;
   p.dispatchEvent(new Event('input',{bubbles:true}));
-  if(typeof window.showStatus==='function')window.showStatus('Extreme Vision keywords added to the live prompt.');
+  if(typeof window.showStatus==='function')window.showStatus('Fast Vision keywords added to the live prompt.');
 }
 function installVisionReturnChannel(){
   try{if('BroadcastChannel'in window){const bc=new BroadcastChannel('upc-vision-lab');bc.onmessage=e=>appendVisionTransfer(e.data);window.__UPC_VISION_CHANNEL__=bc}}catch(e){console.warn('Vision BroadcastChannel unavailable',e)}
@@ -22,10 +22,10 @@ function installVisionReturnChannel(){
 async function boot(){
   setVersion();installVisionReturnChannel();
   try{
-    await load('studio-lite-v110.js?v=20260904-v115');
-    await load('photo-forensics-describer-v111.js?v=20260904-v115');
-    await load('prompt-roast-ai-v113.js?v=20260904-v115');
-    await load('prompt-roast-staged-v115.js?v=20260904-v115');
+    await load('studio-lite-v110.js?v=20260904-v116');
+    await load('photo-forensics-describer-v111.js?v=20260904-v116');
+    await load('prompt-roast-ai-v113.js?v=20260904-v116');
+    await load('prompt-roast-fast-v116.js?v=20260904-v116');
   }catch(e){
     console.warn(e);
     const loadCard=document.getElementById('loadCard');
