@@ -28,6 +28,10 @@ Log "Bridge started on $prefix using app $AppFile"
 function Write-Bytes($ctx, [byte[]]$bytes, [string]$contentType, [int]$statusCode = 200) {
   $ctx.Response.StatusCode = $statusCode
   if ($contentType) { $ctx.Response.ContentType = $contentType }
+  $ctx.Response.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+  $ctx.Response.Headers['Pragma'] = 'no-cache'
+  $ctx.Response.Headers['Expires'] = '0'
+  $ctx.Response.Headers['X-UPC-Version'] = 'V11.8.3'
   $ctx.Response.ContentLength64 = $bytes.Length
   $ctx.Response.OutputStream.Write($bytes,0,$bytes.Length)
 }
@@ -38,11 +42,14 @@ while ($listener.IsListening) {
     $path = $ctx.Request.Url.AbsolutePath
 
     if ($path -eq '/' -or $path -eq '/index.html') {
-      $bytes = [IO.File]::ReadAllBytes($AppFile)
+      $html = [IO.File]::ReadAllText($AppFile)
+      $html = $html.Replace('Ultimate Prompt Creator V11.8 Private Mobile','Ultimate Prompt Creator V11.8.3 Private Mobile')
+      $html = $html.Replace('V11.8 PRIVATE MOBILE','V11.8.3 PRIVATE MOBILE')
+      $bytes = [Text.Encoding]::UTF8.GetBytes($html)
       Write-Bytes $ctx $bytes 'text/html; charset=utf-8' 200
     }
     elseif ($path -eq '/health') {
-      $bytes = [Text.Encoding]::UTF8.GetBytes('OK')
+      $bytes = [Text.Encoding]::UTF8.GetBytes('OK V11.8.3')
       Write-Bytes $ctx $bytes 'text/plain; charset=utf-8' 200
     }
     elseif ($path.StartsWith('/ollama/')) {
@@ -69,6 +76,10 @@ while ($listener.IsListening) {
       Log "Proxy $($ctx.Request.HttpMethod) $path -> $backendUri"
       $resp = $client.SendAsync($msg).GetAwaiter().GetResult()
       $ctx.Response.StatusCode = [int]$resp.StatusCode
+      $ctx.Response.Headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+      $ctx.Response.Headers['Pragma'] = 'no-cache'
+      $ctx.Response.Headers['Expires'] = '0'
+      $ctx.Response.Headers['X-UPC-Version'] = 'V11.8.3'
       $ct = $resp.Content.Headers.ContentType
       if ($ct) { $ctx.Response.ContentType = $ct.ToString() }
       $bytes = $resp.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
