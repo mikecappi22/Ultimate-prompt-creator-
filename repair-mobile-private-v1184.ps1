@@ -22,7 +22,25 @@ function Find-Exe([string]$cmd,[string[]]$candidates){
 
 function Post-Json([string]$url,$obj,[int]$timeout=180){
   $body=$obj|ConvertTo-Json -Depth 30 -Compress
-  return Invoke-RestMethod $url -Method Post -ContentType 'application/json' -Body $body -TimeoutSec $timeout
+  try {
+    return Invoke-RestMethod $url -Method Post -ContentType 'application/json' -Body $body -TimeoutSec $timeout
+  } catch {
+    $detail=$_.Exception.Message
+    try {
+      if($_.Exception.Response){
+        $stream=$_.Exception.Response.GetResponseStream()
+        if($stream){$reader=New-Object IO.StreamReader($stream);$serverBody=$reader.ReadToEnd();$reader.Dispose();if($serverBody){$detail="$detail | Server: $serverBody"}}
+      }
+    } catch {}
+    throw "POST $url failed: $detail"
+  }
+}
+
+function Parse-JsonText([string]$text){
+  $s=[string]$text
+  $a=$s.IndexOf('{');$b=$s.LastIndexOf('}')
+  if($a -ge 0 -and $b -gt $a){$s=$s.Substring($a,$b-$a+1)}
+  return $s|ConvertFrom-Json
 }
 
 try {
@@ -198,6 +216,27 @@ try {
   } 180
   if(-not $pgen.response){throw 'Private HTTPS POST /api/generate returned no response.'}
   Write-Host "Private HTTPS POST PASS: $($pgen.response.Trim())" -ForegroundColor Green
+
+  Write-Host 'Running production-style Director JSON probe through the private URL...' -ForegroundColor White
+  $probePrompt='Return ONLY JSON: {"scores":{"overall":88},"creative_direction":"ok","keywords":[{"keyword":"test","prompt_phrase":"test phrase"}],"final_prompt":"test prompt"} /no_think'
+  $probeOk=$false
+  try {
+    $probe=Post-Json "$origin/ollama/api/generate" @{
+      model=$textModel;prompt=$probePrompt;stream=$false;format='json';keep_alive='10m';
+      options=@{num_predict=220;num_ctx=1536;temperature=0}
+    } 180
+    $po=Parse-JsonText $probe.response
+    if($po.final_prompt){$probeOk=$true;Write-Host 'Director JSON-mode probe PASS.' -ForegroundColor Green}
+  } catch { Write-Host "JSON-mode probe needs fallback: $($_.Exception.Message)" -ForegroundColor Yellow }
+  if(-not $probeOk){
+    $probe2=Post-Json "$origin/ollama/api/generate" @{
+      model=$textModel;prompt=$probePrompt;stream=$false;keep_alive='10m';
+      options=@{num_predict=260;num_ctx=1536;temperature=0}
+    } 180
+    $po2=Parse-JsonText $probe2.response
+    if(-not $po2.final_prompt){throw 'Director fallback probe did not return a usable final_prompt.'}
+    Write-Host 'Director plain-generation fallback probe PASS.' -ForegroundColor Green
+  }
 
   Write-Host ''
   Write-Host '============================================================' -ForegroundColor Green
