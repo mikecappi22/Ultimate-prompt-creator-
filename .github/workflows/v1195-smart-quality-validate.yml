@@ -1,0 +1,67 @@
+name: V11.9.5 Smart Quality Validate
+
+on:
+  push:
+    paths:
+      - 'upgrade-upc-v1195-quality.ps1'
+      - 'mobile-v1194-fast-cpu.js'
+      - '.github/workflows/v1195-smart-quality-validate.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Parse updater with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\upgrade-upc-v1195-quality.ps1'),[ref]$tokens,[ref]$errors) | Out-Null
+          if($errors -and $errors.Count -gt 0){
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          Write-Host 'Windows PowerShell parser PASS'
+
+      - name: Apply exact Smart Quality patch block
+        shell: powershell
+        run: |
+          function Replace-One([string]$text,[string]$pattern,[string]$replacement,[string]$name){
+            $rx=New-Object System.Text.RegularExpressions.Regex($pattern,[System.Text.RegularExpressions.RegexOptions]::Singleline)
+            $m=$rx.Matches($text)
+            if($m.Count -ne 1){throw "Patch '$name' expected 1 match but found $($m.Count)."}
+            return $rx.Replace($text,$replacement,1)
+          }
+          $installer=Get-Content '.\upgrade-upc-v1195-quality.ps1' -Raw
+          $start=$installer.IndexOf("  `$newPerf=@'")
+          $end=$installer.IndexOf("  if(-not `$code.Contains('function evidenceComplete'))")
+          if($start -lt 0 -or $end -le $start){throw 'Could not isolate updater patch block.'}
+          $block=$installer.Substring($start,$end-$start)
+          $code=Get-Content '.\mobile-v1194-fast-cpu.js' -Raw
+          Invoke-Expression $block
+          if(-not $code.Contains('function evidenceComplete')){throw 'Evidence quality gate missing after patch.'}
+          if(-not $code.Contains('Structured on repair pass')){throw 'Structuring repair missing after patch.'}
+          if(-not $code.Contains('Qwen VL 2B quality')){throw 'Qwen quality routing missing after patch.'}
+          [IO.File]::WriteAllText((Join-Path $PWD 'mobile-v1195-ci.js'),$code,[Text.Encoding]::UTF8)
+          Write-Host 'Exact Smart Quality patch block PASS'
+
+      - name: JavaScript syntax check on patched controller
+        shell: powershell
+        run: |
+          node --check .\mobile-v1195-ci.js
+
+      - name: Verify Turbo routes to Qwen VL 2B first
+        shell: powershell
+        run: |
+          $c=Get-Content '.\mobile-v1195-ci.js' -Raw
+          if($c -notmatch "if\(perf==='turbo'\)return qwen2Vision\(\)"){throw 'Turbo does not route to Qwen VL 2B first.'}
+          if($c -notmatch 'evidenceComplete') {throw 'Evidence completeness gate missing.'}
+          if($c -notmatch 'qualityRetryPrompt') {throw 'Vision retry prompt missing.'}
+          if($c -notmatch 'Local evidence parser used after two structuring attempts') {throw 'Two-pass structuring fallback missing.'}
+          Write-Host 'V11.9.5 routing + quality markers PASS'
