@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'subject-vault-v132.js'
+      - 'subject-profile-paste-v133.js'
       - 'tests/subject-vault-harness.html'
       - 'tests/test-subject-vault-browser.mjs'
       - '.github/workflows/subject-vault-browser-test.yml'
@@ -35,5 +36,5 @@ jobs:
           done
           cat /tmp/upc-server.log
           exit 1
-      - name: Run real-browser upload persistence test
+      - name: Run real-browser photo + profile prefill persistence test
         run: node tests/test-subject-vault-browser.mjs
