@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Subject Vault Browser Harness</title></head>
+<body>
+<div class="wrap">
+  <div id="loadCard"></div>
+  <textarea id="prompt"></textarea>
+  <textarea id="manualText"></textarea>
+  <select id="manualStage"><option value="identity">Identity / Subject</option></select>
+  <button id="addManual" type="button">Add</button>
+  <div id="sl-roast"></div>
+</div>
+<script>
+window.showStatus=function(){};
+document.getElementById('addManual').addEventListener('click',()=>{
+  const p=document.getElementById('prompt');
+  const m=document.getElementById('manualText');
+  p.value=[p.value,m.value].filter(Boolean).join('\n\n');
+});
+</script>
+<script src="../subject-vault-v131.js"></script>
+</body>
+</html>
