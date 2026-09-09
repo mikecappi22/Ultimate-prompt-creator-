@@ -31,7 +31,7 @@ async function rawPhotoState(){
 
 try {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#subjectVaultV131', { timeout: 15000 });
+  await page.waitForSelector('#subjectVaultV132', { timeout: 15000 });
   await page.waitForFunction(() => document.querySelector('#svPhotoCount')?.textContent?.includes('0/8'));
   assert(await page.locator('#svName').inputValue() === 'ADDISON', 'ADDISON was not seeded');
   assert(await page.locator('#svType').inputValue() === 'Adult woman', 'ADDISON type is wrong');
@@ -41,10 +41,11 @@ try {
   await page.locator('#svHair').fill('test hair continuity field');
   await page.locator('#svSave').click();
   await page.locator('#svPhotoInput').setInputFiles({name:'addison-test-reference.png',mimeType:'image/png',buffer:png});
-  await page.waitForTimeout(2500);
+  await page.waitForFunction(() => document.querySelector('#svPhotoCount')?.textContent?.includes('1/8'), null, {timeout:15000});
 
   const diagnostic = await page.evaluate(() => ({
     count: document.querySelector('#svPhotoCount')?.textContent || '',
+    state: document.querySelector('#svPhotoState')?.textContent || '',
     status: document.querySelector('#svStatus')?.textContent || '',
     thumbs: document.querySelectorAll('#svPhotos .sv-photo img').length,
     gallery: document.querySelector('#svPhotos')?.textContent || ''
@@ -54,10 +55,11 @@ try {
   console.log('RAW IDB DIAGNOSTIC:', JSON.stringify(raw));
   assert(diagnostic.count.includes('1/8'), 'Upload did not save. Diagnostic: '+JSON.stringify({diagnostic,raw}));
   assert(diagnostic.thumbs === 1, 'Saved thumbnail did not render');
-  assert(diagnostic.status.toLowerCase().includes('saved locally'), 'No visible local-save confirmation');
+  assert(diagnostic.status.toLowerCase().includes('saved locally and verified'), 'No verified local-save confirmation');
+  assert(raw.records.length === 1 && raw.records[0].subjectId === 'addison', 'IndexedDB record is missing or assigned to the wrong subject');
 
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#subjectVaultV131', { timeout: 15000 });
+  await page.waitForSelector('#subjectVaultV132', { timeout: 15000 });
   await page.waitForFunction(() => document.querySelector('#svPhotoCount')?.textContent?.includes('1/8'));
   assert(await page.locator('#svPhotos .sv-photo img').count() === 1, 'Photo did not survive reload');
   assert(await page.locator('#svHair').inputValue() === 'test hair continuity field', 'Subject metadata did not survive reload');
@@ -68,10 +70,12 @@ try {
   await page.waitForFunction(() => document.querySelector('#svPhotoCount')?.textContent?.includes('0/8'));
   assert(await page.locator('#svPhotos .sv-photo img').count() === 0, 'Photo did not disappear after deletion');
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#subjectVaultV131', { timeout: 15000 });
+  await page.waitForSelector('#subjectVaultV132', { timeout: 15000 });
   await page.waitForFunction(() => document.querySelector('#svPhotoCount')?.textContent?.includes('0/8'));
   assert(await page.locator('#svPhotos .sv-photo img').count() === 0, 'Deleted photo returned after reload');
-  console.log('SUBJECT VAULT BROWSER STORAGE TEST PASS');
+  const afterDelete=await rawPhotoState();
+  assert(afterDelete.records.length === 0, 'Deleted IndexedDB record still exists');
+  console.log('SUBJECT VAULT V13.2 BROWSER STORAGE TEST PASS');
 } finally {
   await browser.close();
 }
