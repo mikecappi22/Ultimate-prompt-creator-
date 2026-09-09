@@ -1,0 +1,23 @@
+name: V11.9.2 Vision Regression
+
+on:
+  push:
+    paths:
+      - 'mobile-v1192-clean-vision.js'
+      - 'upgrade-mobile-vision-v1192.ps1'
+      - 'tests/test-v1192.js'
+      - '.github/workflows/v1192-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax check
+        run: node --check mobile-v1192-clean-vision.js
+      - name: Regression suite
+        run: node tests/test-v1192.js
