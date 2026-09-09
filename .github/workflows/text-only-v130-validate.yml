@@ -9,6 +9,7 @@ on:
       - 'mobile-bridge-v117.js'
       - 'mobile-v117.html'
       - 'private-text-only-v130.html'
+      - 'install-text-only-v130.ps1'
       - 'index.html'
       - 'prompt-v8-mobile.html'
       - 'test-text-only-v130.js'
@@ -38,3 +39,35 @@ jobs:
           ! grep -Eiq 'deep-vision|photo-forensics|vision-lab|studio-lite-v110' prompt-v8-mobile.html
           grep -Fq 'V13 TEXT ONLY' feature-loader-v110.js
           grep -Fq 'V13 TEXT ONLY' private-text-only-v130.html
+
+  windows-installer:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-text-only-v130.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){
+            $errors|ForEach-Object{Write-Error $_.Message}
+            exit 1
+          }
+          Write-Host 'Windows PowerShell parser PASS'
+      - name: Verify transactional and cleanup safeguards
+        shell: powershell
+        run: |
+          $s=Get-Content '.\install-text-only-v130.ps1' -Raw
+          $required=@(
+            '8f81e51205cd7dac94a029a299a21081fd843a48',
+            'private-text-only-v130.html',
+            'index-v130-text-only-candidate.html',
+            'Restart-PrivateBridge',
+            'ROLLBACK PASS',
+            'qwen3:1.7b',
+            'qwen3-vl|moondream',
+            'V13 TEXT-ONLY PLATFORM IS READY'
+          )
+          foreach($m in $required){if(-not $s.Contains($m)){throw "Missing installer safeguard: $m"}}
+          Write-Host 'Installer safeguards PASS'
