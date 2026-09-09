@@ -1,36 +1,29 @@
 (function(){
 'use strict';
-const VERSION='V11.6 FAST PIPELINES';
-let lastTransferTs=0;
-function setVersion(){const b=document.querySelector('.badge');if(b)b.textContent=VERSION;document.title='Ultimate Prompt Creator V11.6 Fast Pipelines';}
-function load(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src.includes(src.split('?')[0])))return res();const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('Failed to load '+src));document.body.appendChild(s)})}
-function appendVisionTransfer(payload){
-  if(!payload||payload.type!=='append-to-prompt'||!payload.text)return;
-  if(payload.ts&&payload.ts<=lastTransferTs)return;
-  if(payload.ts)lastTransferTs=payload.ts;
-  const p=document.getElementById('prompt');if(!p)return;
-  const add=String(payload.text).trim();if(!add)return;
-  const base=String(p.value||'').replace(/\s+$/,'');
-  p.value=base?base+', '+add:add;
-  p.dispatchEvent(new Event('input',{bubbles:true}));
-  if(typeof window.showStatus==='function')window.showStatus('Fast Vision keywords added to the live prompt.');
+const VERSION='V13 TEXT ONLY';
+function setVersion(){
+  const b=document.querySelector('.badge');if(b)b.textContent=VERSION;
+  document.title='Ultimate Prompt Creator V13 Text Only';
+  const cards=[...document.querySelectorAll('.wrap > .card')];
+  const info=cards.find(c=>/Stable worker|Creative Studio|heavy/i.test(c.textContent||''));
+  if(info)info.innerHTML='<strong>Text-only platform active.</strong> Database work stays off the main thread. The Creative Director uses local text models only; image upload and image analysis are not part of this build.';
 }
-function installVisionReturnChannel(){
-  try{if('BroadcastChannel'in window){const bc=new BroadcastChannel('upc-vision-lab');bc.onmessage=e=>appendVisionTransfer(e.data);window.__UPC_VISION_CHANNEL__=bc}}catch(e){console.warn('Vision BroadcastChannel unavailable',e)}
-  window.addEventListener('storage',e=>{if(e.key==='upc_vision_transfer_v112'&&e.newValue){try{appendVisionTransfer(JSON.parse(e.newValue))}catch(_){}}});
+function load(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src.includes(src.split('?')[0])))return res();const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('Failed to load '+src));document.body.appendChild(s)})}
+function ensureDirectorHost(){
+  if(document.getElementById('sl-roast'))return;
+  const card=document.createElement('div');card.className='card';card.id='textDirectorCard';card.innerHTML='<div id="sl-roast"></div>';
+  const anchor=document.getElementById('promptCard')||document.querySelector('.wrap')?.lastElementChild;
+  if(anchor?.parentNode)anchor.parentNode.insertBefore(card,anchor);else document.querySelector('.wrap')?.appendChild(card);
 }
 async function boot(){
-  setVersion();installVisionReturnChannel();
+  setVersion();ensureDirectorHost();
   try{
-    await load('studio-lite-v110.js?v=20260904-v116');
-    await load('photo-forensics-describer-v111.js?v=20260904-v116');
-    await load('prompt-roast-ai-v113.js?v=20260904-v116');
-    await load('prompt-roast-fast-v116.js?v=20260904-v116');
-    await load('mobile-bridge-v117.js?v=20260904-v117');
+    await load('text-director-v130.js?v=20260909-v130');
+    await load('mobile-bridge-v117.js?v=20260909-v130');
   }catch(e){
     console.warn(e);
-    const loadCard=document.getElementById('loadCard');
-    if(loadCard)loadCard.insertAdjacentHTML('afterend',`<div class="card"><strong>Creative Studio feature could not load.</strong><div class="help">${String(e.message||e)}</div></div>`);
+    const host=document.getElementById('sl-roast');
+    if(host)host.innerHTML='<div class="help">Text Creative Director could not load: '+String(e.message||e)+'</div>';
   }
   setVersion();
 }
