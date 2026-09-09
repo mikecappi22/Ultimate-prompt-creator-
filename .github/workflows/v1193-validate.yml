@@ -1,0 +1,47 @@
+name: V11.9.3 CPU Edition Validate
+on:
+  push:
+    paths:
+      - 'mobile-v1193-shell.html'
+      - 'mobile-v1193-cpu.js'
+      - 'install-upc-v1193-cpu.ps1'
+      - '.github/workflows/v1193-validate.yml'
+  workflow_dispatch:
+
+jobs:
+  windows-parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-upc-v1193-cpu.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){$errors|ForEach-Object{Write-Error $_.Message};exit 1}
+          Write-Host 'Windows PowerShell parser PASS'
+      - name: Verify CPU installer markers
+        shell: powershell
+        run: |
+          $p=Get-Content '.\install-upc-v1193-cpu.ps1' -Raw
+          if($p -notmatch 'ollama pull moondream'){throw 'Moondream install command missing'}
+          if($p -notmatch 'V11.9.3 CPU EDITION IS READY'){throw 'Ready marker missing'}
+          Write-Host 'CPU installer markers PASS'
+
+  js-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: JavaScript syntax check
+        run: node --check mobile-v1193-cpu.js
+      - name: Verify clean shell and CPU routing
+        run: |
+          grep -q '<!-- UPC_APP_SCRIPT -->' mobile-v1193-shell.html
+          grep -q "moondream" mobile-v1193-cpu.js
+          grep -q "px:448" mobile-v1193-cpu.js
+          ! grep -q "createObjectURL" mobile-v1193-cpu.js
+          echo 'CPU Edition regression checks PASS'
