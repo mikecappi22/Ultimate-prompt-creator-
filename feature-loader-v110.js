@@ -1,12 +1,12 @@
 (function(){
 'use strict';
-const VERSION='V13 TEXT ONLY';
+const VERSION='V13.1 SUBJECT VAULT';
 function setVersion(){
   const b=document.querySelector('.badge');if(b)b.textContent=VERSION;
-  document.title='Ultimate Prompt Creator V13 Text Only';
+  document.title='Ultimate Prompt Creator V13.1 Subject Vault';
   const cards=[...document.querySelectorAll('.wrap > .card')];
-  const info=cards.find(c=>/Stable worker|Creative Studio|heavy/i.test(c.textContent||''));
-  if(info)info.innerHTML='<strong>Text-only platform active.</strong> Database work stays off the main thread. The Creative Director uses local text models only; image upload and image analysis are not part of this build.';
+  const info=cards.find(c=>/Stable worker|Creative Studio|heavy|Text-only platform/i.test(c.textContent||''));
+  if(info)info.innerHTML='<strong>Subject Vault + text-only platform active.</strong> Database work stays off the main thread. Reusable subject profiles feed the prompt builder and Creative Director. Reference photos stay local in your browser and are never analyzed.';
 }
 function load(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src.includes(src.split('?')[0])))return res();const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('Failed to load '+src));document.body.appendChild(s)})}
 function ensureDirectorHost(){
@@ -18,12 +18,13 @@ function ensureDirectorHost(){
 async function boot(){
   setVersion();ensureDirectorHost();
   try{
+    await load('subject-vault-v131.js?v=20260909-v131');
     await load('text-director-v130.js?v=20260909-v130');
     await load('mobile-bridge-v117.js?v=20260909-v130');
   }catch(e){
     console.warn(e);
     const host=document.getElementById('sl-roast');
-    if(host)host.innerHTML='<div class="help">Text Creative Director could not load: '+String(e.message||e)+'</div>';
+    if(host)host.innerHTML='<div class="help">Platform feature could not load: '+String(e.message||e)+'</div>';
   }
   setVersion();
 }
