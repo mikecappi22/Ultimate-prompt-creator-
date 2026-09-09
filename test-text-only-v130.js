@@ -5,7 +5,7 @@ function read(p){return fs.readFileSync(p,'utf8')}
 function assert(ok,msg){if(!ok)throw new Error(msg)}
 const active={
   loader:read('feature-loader-v110.js'),
-  subject:read('subject-vault-v131.js'),
+  subject:read('subject-vault-v132.js'),
   director:read('text-director-v130.js'),
   mobileBridge:read('mobile-bridge-v117.js'),
   mobileSetup:read('mobile-v117.html'),
@@ -13,8 +13,8 @@ const active={
   index:read('index.html'),
   prompt:read('prompt-v8-mobile.html')
 };
-assert(/V13\.1 SUBJECT VAULT/.test(active.loader),'Active loader is not V13.1 SUBJECT VAULT');
-assert(/subject-vault-v131\.js/.test(active.loader),'Subject Vault is not loaded');
+assert(/V13\.2 SUBJECT VAULT/.test(active.loader),'Active loader is not V13.2 SUBJECT VAULT');
+assert(/subject-vault-v132\.js/.test(active.loader),'Subject Vault V13.2 is not loaded');
 assert(/text-director-v130\.js/.test(active.loader),'Text Director is not loaded');
 assert(!/(studio-lite|photo-forensics|deep-vision|vision-lab|upc-vision-lab)/i.test(active.loader),'Active loader still references image-analysis stack');
 assert(!/(FileReader|createObjectURL|type=["']file["']|images\s*:|\/api\/generate|qwen3-vl|llava|gemma3)/i.test(active.director),'Text Director contains image/multimodal code');
@@ -25,16 +25,19 @@ assert(/Director/.test(active.privateApp)&&/Prompt/.test(active.privateApp),'Pri
 assert(!/(deep-vision|photo-forensics|vision-lab|studio-lite-v110)/i.test(active.index),'Public index directly references removed image-analysis modules');
 assert(!/(deep-vision|photo-forensics|vision-lab|studio-lite-v110)/i.test(active.prompt),'Prompt page directly references removed image-analysis modules');
 
-// Subject Vault may store user-selected reference images locally, but it must never analyze or transmit them.
+// Subject Vault can store reference images locally, but may never analyze or transmit them.
 assert(!/\bfetch\s*\(/.test(active.subject),'Subject Vault must not make network requests');
 assert(!/(\/api\/chat|\/api\/generate|images\s*:|qwen3-vl|llava|gemma3|moondream|photo-forensics|vision-lab)/i.test(active.subject),'Subject Vault contains analysis/multimodal routing');
 assert(/indexedDB/.test(active.subject),'Subject Vault should use browser-local IndexedDB for reference photos');
 assert(/FileReader/.test(active.subject),'Subject Vault local reference storage is missing');
+assert(/Array\.from\(e\.target\.files\|\|\[\]\)/.test(active.subject),'Subject Vault must snapshot FileList before clearing the input');
+assert(/IndexedDB write verification failed/.test(active.subject),'Subject Vault is missing post-write verification');
+assert(/saved locally and verified/.test(active.subject),'Subject Vault is missing verified-save confirmation');
 
-require(path.join(process.cwd(),'subject-vault-v131.js'));
-const S=globalThis.SubjectVaultV131Internals;
-assert(S,'Subject Vault internals were not exported');
-assert(S.VERSION==='V13.1 SUBJECT VAULT','Subject Vault version marker mismatch');
+require(path.join(process.cwd(),'subject-vault-v132.js'));
+const S=globalThis.SubjectVaultV132Internals;
+assert(S,'Subject Vault V13.2 internals were not exported');
+assert(S.VERSION==='V13.2 SUBJECT VAULT','Subject Vault version marker mismatch');
 const addison=S.seedAddison();
 assert(addison.id==='addison'&&addison.name==='ADDISON','ADDISON seed record is missing');
 assert(addison.type==='Adult woman','ADDISON should be explicitly adult');
@@ -56,4 +59,4 @@ const files=cp.execFileSync('git',['ls-files'],{encoding:'utf8'}).trim().split(/
 const forbiddenPath=/(^|\/)(?:deep-vision|photo-forensics|vision-lab|vision-mobile|vision-v12|vision-v121|mobile-v1188-vision|mobile-v1189-fast-vision|mobile-v1190-verified-vision|mobile-v1191-resilient-vision|mobile-v1192-clean-vision|test-vision|install-vision|upgrade-mobile-vision|v1188-vision|v1189-fast-vision)/i;
 const leftovers=files.filter(f=>forbiddenPath.test(f));
 assert(leftovers.length===0,'Removed image-analysis files remain: '+leftovers.join(', '));
-console.log('V13.1 Subject Vault + text-only regression PASS');
+console.log('V13.2 Subject Vault + text-only regression PASS');
