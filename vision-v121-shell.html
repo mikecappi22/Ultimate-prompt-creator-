@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Vision V12.1 Quality + Speed</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#64748b;--line:#dbe3ee;--blue:#2563eb;--blue2:#4f46e5;--green:#15803d;--red:#b91c1c;--amber:#b45309;--purple:#6d28d9}
+*{box-sizing:border-box}html{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{margin:0;background:var(--bg);color:var(--ink);padding:12px 10px 80px}.wrap{max-width:860px;margin:auto}.hero{background:linear-gradient(135deg,#0f172a,#334155);color:#fff;border-radius:24px;padding:18px}.hero h1{font-size:24px;margin:0 0 6px}.hero p{font-size:13px;line-height:1.5;color:#dbeafe;margin:0 0 10px}.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#dcfce7;color:#166534;font-weight:900;font-size:11px}.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:15px;margin:11px 0}.card h2,.card h3{margin-top:0}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{display:block;font-size:13px;font-weight:850;margin:9px 0 6px}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:15px;padding:12px;background:#fff;color:var(--ink);font-size:16px}textarea{resize:vertical}.preview{border:1px dashed #cbd5e1;border-radius:18px;min-height:210px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f8fafc;margin-top:10px}.preview img{max-width:100%;max-height:520px;display:block}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}button{border:0;border-radius:999px;padding:11px 15px;font-weight:850;cursor:pointer;min-height:44px}.primary{background:var(--blue);color:#fff}.secondary{background:#ede9fe;color:#5b21b6}.danger{background:#fee2e2;color:#b91c1c}.success{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.status{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.45}.status.good{color:var(--green);font-weight:800}.status.bad{color:var(--red);font-weight:800}.info{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px;border-radius:14px;margin-top:9px;font-size:12px;line-height:1.45}.small{font-size:12px;color:var(--muted);line-height:1.5}.hidden{display:none!important}.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.section{border:1px solid #e2e8f0;border-radius:16px;padding:11px;margin:8px 0;background:#fbfdff}.section h4{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.section p{margin:0;font-size:13px;line-height:1.5}.bubbles{display:flex;flex-wrap:wrap;gap:7px}.bubble{background:#eaf7ea;color:#166534;border:1px solid #cdeacc;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:750}.bubble.estimated{background:#fff7ed;color:#9a3412;border-color:#fed7aa}.confidence{display:inline-block;border-radius:999px;padding:3px 7px;font-size:9px;font-weight:900;letter-spacing:.02em}.confidence.clear{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.confidence.estimated{background:#ffedd5;color:#9a3412;border:1px solid #fed7aa}.legend{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.diag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;white-space:pre-wrap;background:#0f172a;color:#dbeafe;border-radius:14px;padding:11px;max-height:240px;overflow:auto}.progress-overlay{position:fixed;left:0;right:0;top:0;z-index:9999;padding:14px 12px 0;pointer-events:none}.progress-box{max-width:980px;margin:auto;background:rgba(255,255,255,.98);border:1px solid #cbd5e1;border-radius:20px;padding:13px 15px;box-shadow:0 14px 40px rgba(15,23,42,.22);backdrop-filter:blur(12px)}.progress-head,.progress-meta{display:flex;align-items:center;justify-content:space-between;gap:12px}.progress-title{font-weight:900;font-size:15px}.progress-pct{font-weight:950;font-size:20px;color:var(--blue)}.progress-track{height:15px;background:#e7edf8;border-radius:999px;overflow:hidden;margin:10px 0 8px}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--blue2));border-radius:999px;transition:width .25s linear}.progress-meta{font-size:11px;color:var(--muted)}.progress-meta strong{color:#334155}.progress-note{font-size:10px;color:#94a3b8;margin-top:5px}.sticky{position:sticky;bottom:7px;background:rgba(244,247,251,.95);padding:8px;border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(10px)}
+@media(max-width:680px){.grid2,.results-grid{grid-template-columns:1fr}.actions button{flex:1}.hero h1{font-size:21px}.progress-head{align-items:flex-start}.progress-meta{align-items:flex-start;flex-direction:column;gap:2px}}
+</style>
+</head>
+<body>
+<div id="progressOverlay" class="progress-overlay hidden" aria-live="polite">
+  <div class="progress-box">
+    <div class="progress-head"><div id="progressTitle" class="progress-title">Preparing…</div><div id="progressPct" class="progress-pct">0%</div></div>
+    <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+    <div class="progress-meta"><span id="progressStage">Starting</span><strong id="progressEta">ETA calibrating…</strong></div>
+    <div class="progress-note">Percentage and ETA are estimates while local models generate; V12.1 learns from completed runs on this device.</div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="hero">
+    <h1>Vision V12.1 Quality + Speed</h1>
+    <p>The stable V12 two-stage pipeline, tuned for faster CPU execution with confidence-aware evidence and reconstruction.</p>
+    <span class="badge">V12.1 QUALITY + SPEED</span>
+  </div>
+
+  <div class="card">
+    <h3>Private connection</h3>
+    <div id="connStatus" class="status">Checking Ollama through the private Tailscale bridge…</div>
+    <div class="actions"><button id="checkBtn" class="primary">Check Connection</button><button id="selfTestBtn" class="success">Run Full Self-Test</button></div>
+    <div id="modelList" class="small"></div>
+  </div>
+
+  <div class="card">
+    <h2>Reference Image</h2>
+    <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp">
+    <div id="preview" class="preview"><div class="small">Choose a JPG, PNG, or WebP image.</div></div>
+    <div class="grid2">
+      <div><label>Performance</label><select id="mode"><option value="turbo" selected>⚡ Turbo — Qwen VL 2B / 320px</option><option value="balanced">Balanced — Qwen VL 2B / 512px</option><option value="extreme">Extreme — Qwen VL 4B / 640px</option></select></div>
+      <div><label>Vision model</label><select id="visionModel"></select></div>
+    </div>
+    <div id="modeInfo" class="info">Turbo uses qwen3-vl:2b-instruct at 320px with a compact evidence budget. qwen3:1.7b performs schema-constrained reconstruction. Estimated details remain visibly marked.</div>
+    <div class="legend"><span class="confidence clear">CLEAR</span><span class="small">directly supported</span><span class="confidence estimated">ESTIMATED</span><span class="small">visible but uncertain at this resolution</span></div>
+    <label>Analysis goal</label>
+    <textarea id="goal" rows="5">Reverse-engineer this image for faithful AI image recreation. Analyze only visually supported information. Be specific about subject appearance, face, eyes, skin, hair, wardrobe, pose, camera, composition, lighting, environment, color, material texture, depth of field, and realism. Do not identify the person or invent hidden details.</textarea>
+    <div class="actions"><button id="runBtn" class="primary" disabled>Run V12.1 Analysis</button><button id="cancelBtn" class="danger" disabled>Cancel</button></div>
+    <div id="runStatus" class="status">Upload an image to begin.</div>
+  </div>
+
+  <div id="results" class="hidden">
+    <div class="results-grid">
+      <div class="card"><h3>Image summary</h3><textarea id="imageSummary" rows="7" readonly></textarea></div>
+      <div class="card"><h3>Reconstruction summary</h3><textarea id="reconSummary" rows="7" readonly></textarea></div>
+    </div>
+    <div class="card"><h3>Reconstruction keywords</h3><div id="keywords" class="bubbles"></div></div>
+    <div class="card"><h3>Structured visual sections</h3><div id="sections"></div></div>
+    <div class="card"><h3>Reconstruction prompt</h3><textarea id="reconPrompt" rows="14"></textarea><div class="actions"><button id="copyPromptBtn" class="primary">Copy Prompt</button></div></div>
+    <div class="card"><h3>Raw visual evidence</h3><textarea id="rawEvidence" rows="16" readonly></textarea></div>
+    <div class="card"><h3>Diagnostics</h3><div id="diagnostics" class="diag">No run yet.</div></div>
+  </div>
+
+  <div class="sticky"><div class="small"><b>V12.1 rule:</b> uncertainty may never be promoted to certainty. Shallow evidence is retried once, structuring is repaired once, and transactional installation rolls back automatically if live tests fail.</div></div>
+</div>
+<!-- VISION_V121_SCRIPT -->
+</body>
+</html>
