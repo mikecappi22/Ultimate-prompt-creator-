@@ -1,12 +1,12 @@
 (function(){
 'use strict';
-const VERSION='V13.2 SUBJECT VAULT';
+const VERSION='V13.3 SUBJECT VAULT';
 function setVersion(){
   const b=document.querySelector('.badge');if(b)b.textContent=VERSION;
-  document.title='Ultimate Prompt Creator V13.2 Subject Vault';
+  document.title='Ultimate Prompt Creator V13.3 Subject Vault';
   const cards=[...document.querySelectorAll('.wrap > .card')];
   const info=cards.find(c=>/Stable worker|Creative Studio|heavy|Text-only platform|Subject Vault/i.test(c.textContent||''));
-  if(info)info.innerHTML='<strong>Subject Vault + text-only platform active.</strong> Database work stays off the main thread. Reusable subject profiles feed the prompt builder and Creative Director. Reference photos stay local in your browser, are verified after saving, and are never analyzed.';
+  if(info)info.innerHTML='<strong>Subject Vault + text-only platform active.</strong> Database work stays off the main thread. Reusable subject profiles feed the prompt builder and Creative Director. Reference photos stay local in your browser, are verified after saving, and can be paired with ChatGPT-generated profile JSON for one-click prefill.';
 }
 function load(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src.includes(src.split('?')[0])))return res();const s=document.createElement('script');s.src=src;s.async=true;s.onload=res;s.onerror=()=>rej(new Error('Failed to load '+src));document.body.appendChild(s)})}
 function ensureDirectorHost(){
@@ -18,7 +18,8 @@ function ensureDirectorHost(){
 async function boot(){
   setVersion();ensureDirectorHost();
   try{
-    await load('subject-vault-v132.js?v=20260909-v132');
+    await load('subject-vault-v132.js?v=20260909-v132-fixed');
+    await load('subject-profile-paste-v133.js?v=20260909-v133');
     await load('text-director-v130.js?v=20260909-v130');
     await load('mobile-bridge-v117.js?v=20260909-v130');
   }catch(e){
