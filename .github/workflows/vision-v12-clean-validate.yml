@@ -1,0 +1,70 @@
+name: Vision V12 Clean Room Validate
+
+on:
+  push:
+    paths:
+      - 'vision-v12-clean-shell.html'
+      - 'vision-v12-clean.js'
+      - 'test-vision-v12-clean.js'
+      - 'install-vision-v12-clean.ps1'
+      - '.github/workflows/vision-v12-clean-validate.yml'
+  workflow_dispatch:
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: JavaScript syntax check
+        run: node --check vision-v12-clean.js
+      - name: V12 regression suite
+        run: node test-vision-v12-clean.js
+      - name: Verify clean-room markers
+        shell: bash
+        run: |
+          grep -q 'V12 CLEAN ROOM' vision-v12-clean-shell.html
+          grep -q 'class ProgressTracker' vision-v12-clean.js
+          grep -q 'Estimated remaining' vision-v12-clean.js
+          grep -q "model:'qwen3-vl:2b-instruct'" vision-v12-clean.js
+          ! grep -Eqi 'moondream|V11\.9|v119|URL\.createObjectURL' vision-v12-clean.js
+      - name: Assemble served page and inspect
+        shell: python
+        run: |
+          from pathlib import Path
+          shell=Path('vision-v12-clean-shell.html').read_text(encoding='utf-8')
+          js=Path('vision-v12-clean.js').read_text(encoding='utf-8')
+          assert shell.count('<!-- VISION_V12_SCRIPT -->') == 1
+          combined=shell.replace('<!-- VISION_V12_SCRIPT -->','<script>\n'+js+'\n</script>')
+          assert 'V12 CLEAN ROOM' in combined
+          assert 'class ProgressTracker' in combined
+          assert 'qwen3-vl:2b-instruct' in combined
+          assert 'qwen3:1.7b' in combined
+          Path('/tmp/vision-v12-index.html').write_text(combined,encoding='utf-8')
+          print('Assembled page PASS', len(combined))
+
+  windows-installer:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-vision-v12-clean.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){$errors|ForEach-Object{Write-Error $_.Message};exit 1}
+          Write-Host 'Windows PowerShell parser PASS'
+      - name: Verify installer safety and pinned assets
+        shell: powershell
+        run: |
+          $s=Get-Content '.\install-vision-v12-clean.ps1' -Raw
+          if($s -notmatch "assetCommit='ff29edf2a454a4d4d499ad3f42aeef055af0e0a1'"){throw 'Installer assets are not commit-pinned.'}
+          if($s -notmatch 'index-before-v12-'){throw 'Previous app backup logic missing.'}
+          if($s -notmatch 'private-mobile-proxy-v1186.ps1'){throw 'Stable bridge reference missing.'}
+          if($s -notmatch 'qwen3-vl:2b-instruct'){throw 'Qwen VL 2B requirement missing.'}
+          if($s -notmatch 'qwen3:1.7b'){throw 'qwen3 structuring model requirement missing.'}
+          if($s -notmatch 'VISION V12 CLEAN ROOM IS READY'){throw 'Success marker missing.'}
+          Write-Host 'Installer marker checks PASS'
