@@ -1,1 +1,0 @@
-V11.8.9 is a quality/performance Vision upgrade on top of the proven V11.8.6 StreamContent bridge and V11.8.7 Director.

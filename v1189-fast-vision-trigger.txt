@@ -1,1 +1,0 @@
-V11.8.9 Fast Vision: installs qwen3-vl:2b-instruct for Turbo and tests direct/local/private inference.

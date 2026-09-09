@@ -1,0 +1,40 @@
+name: V13 Text Only Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'feature-loader-v110.js'
+      - 'text-director-v130.js'
+      - 'mobile-bridge-v117.js'
+      - 'mobile-v117.html'
+      - 'private-text-only-v130.html'
+      - 'index.html'
+      - 'prompt-v8-mobile.html'
+      - 'test-text-only-v130.js'
+      - '.github/workflows/text-only-v130-validate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax checks
+        run: |
+          node --check feature-loader-v110.js
+          node --check text-director-v130.js
+          node --check mobile-bridge-v117.js
+      - name: V13 text-only regression
+        run: node test-text-only-v130.js
+      - name: Verify active pages are image-analysis free
+        run: |
+          ! grep -Eiq 'deep-vision|photo-forensics|vision-lab|studio-lite-v110' index.html
+          ! grep -Eiq 'deep-vision|photo-forensics|vision-lab|studio-lite-v110' prompt-v8-mobile.html
+          grep -Fq 'V13 TEXT ONLY' feature-loader-v110.js
+          grep -Fq 'V13 TEXT ONLY' private-text-only-v130.html

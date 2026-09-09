@@ -1,1 +1,0 @@
-V11.8.8 replaces mobile Vision preprocessing with FileReader + Canvas DataURL/base64, no URL.createObjectURL in the active Vision path. Upgrade script keeps V11.8.6 StreamContent bridge and V11.8.7 Quality Director, then runs local/private synthetic vision JSON tests.
