@@ -1,4 +1,4 @@
-name: V13.2 Subject Vault Validate
+name: V13.3 Subject Vault Validate
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'feature-loader-v110.js'
       - 'subject-vault-v132.js'
+      - 'subject-profile-paste-v133.js'
       - 'text-director-v130.js'
       - 'mobile-bridge-v117.js'
       - 'mobile-v117.html'
@@ -31,18 +32,21 @@ jobs:
         run: |
           node --check feature-loader-v110.js
           node --check subject-vault-v132.js
+          node --check subject-profile-paste-v133.js
           node --check text-director-v130.js
           node --check mobile-bridge-v117.js
-      - name: V13.2 Subject Vault regression
+      - name: V13.3 Subject Vault regression
         run: node test-text-only-v130.js
       - name: Verify active pages remain free of image-analysis stack
         run: |
           ! grep -Eiq 'deep-vision|photo-forensics|vision-lab|studio-lite-v110' index.html
           ! grep -Eiq 'deep-vision|photo-forensics|vision-lab|studio-lite-v110' prompt-v8-mobile.html
-          grep -Fq 'V13.2 SUBJECT VAULT' feature-loader-v110.js
+          grep -Fq 'V13.3 SUBJECT VAULT' feature-loader-v110.js
           grep -Fq 'subject-vault-v132.js' feature-loader-v110.js
+          grep -Fq 'subject-profile-paste-v133.js' feature-loader-v110.js
           grep -Fq 'V13 TEXT ONLY' private-text-only-v130.html
           ! grep -Eiq '/api/chat|/api/generate|qwen3-vl|llava|gemma3|moondream' subject-vault-v132.js
+          ! grep -Eiq '/api/chat|/api/generate|qwen3-vl|llava|gemma3|moondream|indexedDB|FileReader' subject-profile-paste-v133.js
 
   windows-installer:
     runs-on: windows-2025
