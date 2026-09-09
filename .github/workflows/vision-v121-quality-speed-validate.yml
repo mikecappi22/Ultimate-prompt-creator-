@@ -1,0 +1,104 @@
+name: Vision V12.1 Quality Speed Validate
+
+on:
+  push:
+    paths:
+      - 'vision-v121-shell.html'
+      - 'vision-v121-quality-speed.js'
+      - 'test-vision-v121.js'
+      - 'install-vision-v121-quality-speed.ps1'
+      - '.github/workflows/vision-v121-quality-speed-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax check
+        run: node --check vision-v121-quality-speed.js
+      - name: V12.1 regression suite
+        run: node test-vision-v121.js
+      - name: Compare Turbo budget against working V12
+        run: |
+          node - <<'NODE'
+          require('./vision-v12-clean.js');
+          const oldCfg=globalThis.VisionV12Internals.MODES.turbo;
+          require('./vision-v121-quality-speed.js');
+          const newCfg=globalThis.VisionV121Internals.MODES.turbo;
+          const checks=[
+            ['image px',newCfg.px<oldCfg.px,oldCfg.px,newCfg.px],
+            ['vision tokens',newCfg.vTok<oldCfg.vTok,oldCfg.vTok,newCfg.vTok],
+            ['vision context',newCfg.vCtx<oldCfg.vCtx,oldCfg.vCtx,newCfg.vCtx],
+            ['structure tokens',newCfg.sTok<oldCfg.sTok,oldCfg.sTok,newCfg.sTok],
+            ['structure context',newCfg.sCtx<oldCfg.sCtx,oldCfg.sCtx,newCfg.sCtx]
+          ];
+          for(const [name,ok,before,after] of checks){
+            console.log(`${name}: ${before} -> ${after}`);
+            if(!ok)throw new Error(`${name} did not decrease`);
+          }
+          NODE
+      - name: Verify clean confidence-aware controller markers
+        run: |
+          grep -q "Vision V12.1 Quality + Speed" vision-v121-quality-speed.js
+          grep -q "BANNED_CERTAINTY" vision-v121-quality-speed.js
+          grep -q "format:STRUCT_SCHEMA" vision-v121-quality-speed.js
+          grep -q "px:320" vision-v121-quality-speed.js
+          grep -q "VisionV121Internals" vision-v121-quality-speed.js
+          ! grep -qi "moondream" vision-v121-quality-speed.js
+          ! grep -q "URL.createObjectURL" vision-v121-quality-speed.js
+      - name: Assemble exact candidate page
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const shell=fs.readFileSync('vision-v121-shell.html','utf8');
+          const js=fs.readFileSync('vision-v121-quality-speed.js','utf8');
+          if(!shell.includes('<!-- VISION_V121_SCRIPT -->'))throw new Error('shell marker missing');
+          const page=shell.replace('<!-- VISION_V121_SCRIPT -->',`<script>\n${js}\n</script>`);
+          fs.writeFileSync('/tmp/vision-v121-candidate.html',page);
+          for(const marker of ['V12.1 QUALITY + SPEED','class ProgressTracker','BANNED_CERTAINTY','px:320']){
+            if(!page.includes(marker))throw new Error('assembled page missing '+marker);
+          }
+          if(/moondream/i.test(page))throw new Error('assembled page contains Moondream');
+          console.log('Assembled candidate PASS',page.length,'bytes');
+          NODE
+
+  windows-installer:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-vision-v121-quality-speed.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){
+            $errors|ForEach-Object{Write-Error $_.Message}
+            exit 1
+          }
+          Write-Host 'Windows PowerShell parser PASS'
+      - name: Verify pinned assets and transactional rollback
+        shell: powershell
+        run: |
+          $s=Get-Content '.\install-vision-v121-quality-speed.ps1' -Raw
+          $required=@(
+            "589c1a9267e3ea96cafc28820a1db8a677d4535e",
+            "index-v121-candidate.html",
+            "Rollback backup",
+            "ROLLBACK PASS",
+            "Restart-PrivateBridge",
+            "BANNED_CERTAINTY",
+            "format:STRUCT_SCHEMA",
+            "px:320",
+            "V12.1 QUALITY + SPEED IS READY"
+          )
+          foreach($m in $required){if(-not $s.Contains($m)){throw "Missing installer safeguard: $m"}}
+          if($s -match 'URL\.createObjectURL'){throw 'Unsafe object URL marker found in installer'}
+          Write-Host 'Transactional installer safeguards PASS'
