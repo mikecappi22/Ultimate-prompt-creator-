@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'subject-vault-v131.js'
+      - 'subject-vault-v132.js'
       - 'tests/subject-vault-harness.html'
       - 'tests/test-subject-vault-browser.mjs'
       - '.github/workflows/subject-vault-browser-test.yml'
