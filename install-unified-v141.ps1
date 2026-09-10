@@ -25,6 +25,12 @@ function Download-Text([string]$Name){
 function Read-Utf8([string]$Path){
   return [System.IO.File]::ReadAllText($Path,[System.Text.Encoding]::UTF8)
 }
+function Assert-NoMojibake([string]$Text,[string]$Where){
+  foreach($cp in @(0x00F0,0x00E2,0x00C3,0xFFFD)){
+    $ch=[string][char]$cp
+    if($Text.Contains($ch)){throw "Encoding corruption detected in $Where (code point $cp)."}
+  }
+}
 function Stop-Bridge {
   Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue | Where-Object {
     $_.CommandLine -match 'private-mobile-proxy-v1186\.ps1' -and $_.CommandLine -match '8765'
@@ -54,9 +60,7 @@ if($html.Contains('/*__SUBJECT_') -or $html.Contains('/*__PHOTO_BACKUP__*/')){th
 foreach($m in @('V14.1 UNIFIED','Subjects','Director','Prompt','Export Photo Backup','Import Photo Backup','qwen3:1.7b','ADDISON','ANNA','ASHLEY','AVA','BECKIE')){
   if(-not $html.Contains($m)){throw "Candidate page missing required marker: $m"}
 }
-foreach($bad in @('ðŸ','âœ','â€”','ï¿½')){
-  if($html.Contains($bad)){throw "Encoding corruption detected in assembled page: $bad"}
-}
+Assert-NoMojibake $html 'assembled page'
 $candidate=Join-Path $Tmp 'index-v141-candidate.html'
 [System.IO.File]::WriteAllText($candidate,$html,$Utf8NoBom)
 
@@ -89,9 +93,7 @@ try{
   foreach($m in @('V14.1 UNIFIED','Subject Vault','Creative Director','Prompt Workspace','Export Photo Backup')){
     if(-not $page.Content.Contains($m)){throw "Served page missing $m"}
   }
-  foreach($bad in @('ðŸ','âœ','â€”','ï¿½')){
-    if($page.Content.Contains($bad)){throw "Served page has encoding corruption: $bad"}
-  }
+  Assert-NoMojibake $page.Content 'served page'
   $ollama=Invoke-WebRequest 'http://127.0.0.1:8765/ollama/api/tags' -UseBasicParsing -TimeoutSec 20
   if($ollama.StatusCode -ne 200){throw "Ollama proxy returned $($ollama.StatusCode)"}
 }catch{
