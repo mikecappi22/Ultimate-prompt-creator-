@@ -1,0 +1,43 @@
+name: V14 Unified Validate
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'private-unified-v140-shell.html'
+      - 'install-unified-v140.ps1'
+      - '.github/workflows/unified-v140-validate.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify unified shell markers
+        run: |
+          grep -Fq 'V14 UNIFIED' private-unified-v140-shell.html
+          grep -Fq 'data-nav="subjects"' private-unified-v140-shell.html
+          grep -Fq 'data-nav="director"' private-unified-v140-shell.html
+          grep -Fq 'data-nav="prompt"' private-unified-v140-shell.html
+          grep -Fq '/*__SUBJECT_DEFAULTS__*/' private-unified-v140-shell.html
+          grep -Fq '/*__SUBJECT_VAULT__*/' private-unified-v140-shell.html
+          grep -Fq '/*__PROFILE_PREFILL__*/' private-unified-v140-shell.html
+          grep -Fq '/ollama/api' private-unified-v140-shell.html
+      - name: Verify installer assembly and safeguards
+        run: |
+          grep -Fq "962633ef26cdf5b9af948583e3639f249a0ab5e3" install-unified-v140.ps1
+          grep -Fq 'private-mobile-proxy-v1186.ps1' install-unified-v140.ps1
+          grep -Fq 'Smoke test failed. Restoring previous page' install-unified-v140.ps1
+          grep -Fq 'V14 UNIFIED WORKSPACE IS READY' install-unified-v140.ps1
+  windows-parser:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-unified-v140.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){$errors|ForEach-Object{Write-Error $_.Message}; exit 1}
+          Write-Host 'V14 installer parser PASS'
