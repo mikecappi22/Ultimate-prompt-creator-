@@ -99,7 +99,7 @@ jobs:
           $html=$html.Replace('/*__PROFILE_PREFILL__*/',(Read-Utf8 '.\subject-profile-paste-v133.js'))
           $html=$html.Replace('/*__PHOTO_BACKUP__*/',(Read-Utf8 '.\subject-photo-backup-v141.js'))
           foreach($m in @('V14.1 UNIFIED','Subject Vault','Export Photo Backup','Import Photo Backup','ADDISON','ANNA','ASHLEY','AVA','BECKIE')){if(-not $html.Contains($m)){throw "Missing $m"}}
-          foreach($bad in @('ðŸ','âœ','â€”','ï¿½')){if($html.Contains($bad)){throw "Mojibake detected: $bad"}}
+          foreach($cp in @(0x00F0,0x00E2,0x00C3,0xFFFD)){$ch=[string][char]$cp;if($html.Contains($ch)){throw "Mojibake code point detected: $cp"}}
           if($html.Contains('/*__SUBJECT_') -or $html.Contains('/*__PHOTO_BACKUP__*/')){throw 'Assembly marker remained'}
           if(-not (Get-Content '.\install-unified-v141.ps1' -Raw).Contains('ReadAllText')){throw 'Installer lost UTF-8 safe reader'}
           Write-Host 'V14.1 Windows UTF-8 assembly PASS'
