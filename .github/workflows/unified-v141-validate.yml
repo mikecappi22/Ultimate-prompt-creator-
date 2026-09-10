@@ -1,0 +1,105 @@
+name: V14.1 Unified Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'private-unified-v141-shell.html'
+      - 'install-unified-v141.ps1'
+      - 'subject-photo-backup-v141.js'
+      - 'feature-loader-v110.js'
+      - 'tests/photo-backup-harness-v141.html'
+      - 'tests/test-photo-backup-v141.mjs'
+      - '.github/workflows/unified-v141-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check subject-photo-backup-v141.js
+      - name: Verify clean navigation and photo migration markers
+        run: |
+          grep -Fq 'V14.1 UNIFIED' private-unified-v141-shell.html
+          grep -Fq 'data-nav="subjects"' private-unified-v141-shell.html
+          grep -Fq 'data-nav="director"' private-unified-v141-shell.html
+          grep -Fq 'data-nav="prompt"' private-unified-v141-shell.html
+          grep -Fq '<svg' private-unified-v141-shell.html
+          grep -Fq '#7c3aed' private-unified-v141-shell.html
+          grep -Fq '#f97316' private-unified-v141-shell.html
+          grep -Fq '#2563eb' private-unified-v141-shell.html
+          grep -Fq 'subject-photo-backup-v141.js' feature-loader-v110.js
+          grep -Fq 'Export Photo Backup' subject-photo-backup-v141.js
+          grep -Fq 'Import Photo Backup' subject-photo-backup-v141.js
+          ! grep -Eiq '/ollama/|qwen3|llava|moondream|fetch\(' subject-photo-backup-v141.js
+      - name: Reject mojibake markers in V14.1 shell
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('private-unified-v141-shell.html').read_text(encoding='utf-8')
+          bad=['ðŸ','âœ','â€”','ï¿½']
+          found=[x for x in bad if x in s]
+          if found: raise SystemExit('mojibake markers: '+repr(found))
+          for marker in ['Subjects','Director','Prompt','Subject Vault','Ollama: checking...']:
+              assert marker in s, marker
+          print('V14.1 shell encoding markers PASS')
+          PY
+
+  browser-photo-migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/tmp/upc-v141.log 2>&1 &
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8000/tests/photo-backup-harness-v141.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/upc-v141.log
+          exit 1
+      - name: Export delete import photo round trip
+        run: node tests/test-photo-backup-v141.mjs
+
+  windows-parser-and-assembly:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-unified-v141.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){$errors|ForEach-Object{Write-Error $_.Message};exit 1}
+          Write-Host 'V14.1 installer parser PASS'
+      - name: Simulate UTF-8 assembly exactly
+        shell: powershell
+        run: |
+          function Read-Utf8([string]$Path){return [System.IO.File]::ReadAllText((Resolve-Path $Path),[System.Text.Encoding]::UTF8)}
+          $html=Read-Utf8 '.\private-unified-v141-shell.html'
+          $html=$html.Replace('/*__SUBJECT_DEFAULTS__*/',(Read-Utf8 '.\subject-defaults-v134.js'))
+          $html=$html.Replace('/*__SUBJECT_VAULT__*/',(Read-Utf8 '.\subject-vault-v132.js'))
+          $html=$html.Replace('/*__PROFILE_PREFILL__*/',(Read-Utf8 '.\subject-profile-paste-v133.js'))
+          $html=$html.Replace('/*__PHOTO_BACKUP__*/',(Read-Utf8 '.\subject-photo-backup-v141.js'))
+          foreach($m in @('V14.1 UNIFIED','Subject Vault','Export Photo Backup','Import Photo Backup','ADDISON','ANNA','ASHLEY','AVA','BECKIE')){if(-not $html.Contains($m)){throw "Missing $m"}}
+          foreach($bad in @('ðŸ','âœ','â€”','ï¿½')){if($html.Contains($bad)){throw "Mojibake detected: $bad"}}
+          if($html.Contains('/*__SUBJECT_') -or $html.Contains('/*__PHOTO_BACKUP__*/')){throw 'Assembly marker remained'}
+          if(-not (Get-Content '.\install-unified-v141.ps1' -Raw).Contains('ReadAllText')){throw 'Installer lost UTF-8 safe reader'}
+          Write-Host 'V14.1 Windows UTF-8 assembly PASS'
