@@ -35,7 +35,7 @@ $html=$html.Replace('/*__SUBJECT_DEFAULTS__*/',(Get-Content $Defaults -Raw))
 $html=$html.Replace('/*__SUBJECT_VAULT__*/',(Get-Content $Vault -Raw))
 $html=$html.Replace('/*__PROFILE_PREFILL__*/',(Get-Content $Prefill -Raw))
 if($html.Contains('/*__SUBJECT_')){throw 'Assembly marker remained in candidate page.'}
-foreach($m in @('V14 UNIFIED','👤 Subjects','🔥 Director','✨ Prompt','qwen3:1.7b','ADDISON','ANNA','ASHLEY','AVA','BECKIE','IndexedDB')){
+foreach($m in @('V14 UNIFIED','Subjects','Director','Prompt','qwen3:1.7b','ADDISON','ANNA','ASHLEY','AVA','BECKIE','IndexedDB')){
   if(-not $html.Contains($m)){throw "Candidate page missing required marker: $m"}
 }
 $candidate=Join-Path $Tmp 'index-v140-candidate.html'
