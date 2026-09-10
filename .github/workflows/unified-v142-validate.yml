@@ -1,0 +1,67 @@
+name: V14.2 Unified Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'subject-vault-v142.js'
+      - 'subject-profile-paste-v142.js'
+      - 'feature-loader-v110.js'
+      - 'install-unified-v142.ps1'
+      - '.github/workflows/unified-v142-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check subject-vault-v142.js
+          node --check subject-profile-paste-v142.js
+          node --check feature-loader-v110.js
+      - name: Verify text-only Subject Vault
+        run: |
+          grep -Fq 'V14.2 SUBJECT VAULT' subject-vault-v142.js
+          grep -Fq 'Reference workflow:' subject-vault-v142.js
+          grep -Fq 'subject-vault-v142.js' feature-loader-v110.js
+          grep -Fq 'subject-profile-paste-v142.js' feature-loader-v110.js
+          ! grep -Fq 'subject-photo-backup-v141.js' feature-loader-v110.js
+          ! grep -Eiq 'indexedDB|PHOTO_DB|PHOTO_STORE|svPhotoInput|Export Photo Backup|Import Photo Backup' subject-vault-v142.js
+          ! grep -Eiq 'indexedDB|PHOTO_DB|PHOTO_STORE|local reference photos' subject-profile-paste-v142.js
+
+  windows-parser-and-assembly:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse installer with Windows PowerShell
+        shell: powershell
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\install-unified-v142.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors -and $errors.Count -gt 0){$errors|ForEach-Object{Write-Error $_.Message};exit 1}
+          Write-Host 'V14.2 installer parser PASS'
+      - name: Simulate exact text-only assembly
+        shell: powershell
+        run: |
+          function Read-Utf8([string]$Path){return [System.IO.File]::ReadAllText((Resolve-Path $Path),[System.Text.Encoding]::UTF8)}
+          $html=Read-Utf8 '.\private-unified-v141-shell.html'
+          $html=$html.Replace('/*__SUBJECT_DEFAULTS__*/',(Read-Utf8 '.\subject-defaults-v134.js'))
+          $html=$html.Replace('/*__SUBJECT_VAULT__*/',(Read-Utf8 '.\subject-vault-v142.js'))
+          $html=$html.Replace('/*__PROFILE_PREFILL__*/',(Read-Utf8 '.\subject-profile-paste-v142.js'))
+          $html=$html.Replace('/*__PHOTO_BACKUP__*/','')
+          $html=$html.Replace('V14.1 UNIFIED','V14.2 UNIFIED')
+          $html=$html.Replace('V14.1 Unified','V14.2 Unified')
+          $html=$html.Replace('Subject profiles and reference photos stay in this browser.','Subject profiles stay in this browser.')
+          $html=$html.Replace('Reusable identities and local reference photos.','Reusable identities and continuity profiles.')
+          foreach($m in @('V14.2 UNIFIED','Subject Vault','Creative Director','Prompt Workspace','ADDISON','ANNA','ASHLEY','AVA','BECKIE','Paste Profile JSON')){if(-not $html.Contains($m)){throw "Missing $m"}}
+          foreach($bad in @('Export Photo Backup','Import Photo Backup','svPhotoInput','IndexedDB','PHOTO_DB','PHOTO_STORE')){if($html.Contains($bad)){throw "Photo storage code remained: $bad"}}
+          Write-Host 'V14.2 Windows text-only assembly PASS'
