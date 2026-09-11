@@ -1,0 +1,33 @@
+/* Ultimate Prompt Creator V15.6 Platform Diagnostics */
+(function(g){'use strict';if(g.__UPC_DIAG156__)return;g.__UPC_DIAG156__=1;
+const $=id=>document.getElementById(id),read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch(_){return d}};
+const tests=[];function add(name,fn){tests.push([name,fn])}function ok(v,msg=''){return{pass:!!v,msg}};
+function exists(...ids){return ids.every(id=>!!$(id))}
+add('App shell',()=>ok(!!document.body,'DOM loaded'));
+add('Bridge health',async()=>{let r=await fetch('/health',{cache:'no-store'});return ok(r.ok,await r.text())});
+add('Subject Vault',()=>ok(!!document.querySelector('[data-nav="subjects"]')||!!$('loadCard'),'Subjects UI found'));
+add('Subject roster',()=>{let a=read('upc_subject_vault_v131',[]);return ok(Array.isArray(a)&&a.length>=11,`${Array.isArray(a)?a.length:0} subjects found`)});
+add('Active subject',()=>{let a=read('upc_subject_vault_v131',[]),id=localStorage.getItem('upc_subject_vault_active_v131');return ok(!id||a.some(x=>x.id===id),id?'Active subject valid':'No active subject yet')});
+add('Smart Composer',()=>ok(exists('scScene','scHair','scPoseAction','scEnvironment','scLighting','scCamera'),'Core build fields found'));
+add('Prompt preview',()=>ok(!!$('scPreview')||!!$('workspace'),'Prompt output area found'));
+add('Prompt workspace',()=>ok(!!$('workspace'),'Workspace found'));
+add('Projects',()=>ok(!!document.querySelector('[data-nav="production"]')||!!$('projectCards'),'Production UI found'));
+add('Shot Builder',()=>ok(!!$('shotBuilder')||!!document.querySelector('[id*="shot"]'),'Shot UI present'));
+add('Prompt History',()=>ok(!!$('historyList')||!!document.querySelector('[id*="history"]'),'History UI present'));
+add('Environment Vault',()=>ok(!!document.querySelector('[id*="environment"]')||!!document.body.textContent.includes('Environment Vault'),'Environment tools present'));
+add('Asset Vault',()=>ok(!!document.body.textContent.includes('Asset Vault'),'Asset tools present'));
+add('Continuity Matrix',()=>ok(!!document.body.textContent.includes('Continuity Matrix'),'Continuity tools present'));
+add('Dialogue Builder',()=>ok(!!document.body.textContent.includes('Dialogue Builder'),'Dialogue tools present'));
+add('Batch Builder',()=>ok(!!document.body.textContent.includes('Batch Prompt Builder'),'Batch tools present'));
+add('Model Adapter',()=>ok(!!document.body.textContent.includes('Model Adapter'),'Model adapter present'));
+add('Interactive Guide',()=>ok(!!g.UPCGuide||!!document.querySelector('.guide-fab'),'Guide loaded'));
+add('Prompt database worker',async()=>{let r=await fetch('/db-worker-v100.js',{cache:'no-store'});return ok(r.ok,`HTTP ${r.status}`)});
+add('Prompt database JSON',async()=>{let r=await fetch('/db-v8-mobile.json',{cache:'no-store'});return ok(r.ok,`HTTP ${r.status}`)});
+add('Ollama tags',async()=>{let r=await fetch('/ollama/api/tags',{cache:'no-store'});if(!r.ok)return ok(false,`HTTP ${r.status}`);let j=await r.json();let names=(j.models||[]).map(x=>x.name||x.model);return ok(names.includes('qwen3:1.7b'),names.join(', ')||'No models')});
+add('Creative Director chat',async()=>{let r=await fetch('/ollama/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'qwen3:1.7b',messages:[{role:'user',content:'Return JSON only: {"status":"OK"}'}],stream:false,think:false,format:'json',options:{num_predict:40,num_ctx:1024,temperature:0}})});if(!r.ok)return ok(false,`HTTP ${r.status}`);let j=await r.json();return ok(!!j.message?.content,'Director transport works')});
+add('Backup storage access',()=>{try{let k='__upc_diag__';localStorage.setItem(k,'1');localStorage.removeItem(k);return ok(true,'Local storage writable')}catch(e){return ok(false,e.message)}});
+function css(){if($('diag156style'))return;let s=document.createElement('style');s.id='diag156style';s.textContent=`.diag-fab{position:fixed;right:18px;bottom:84px;z-index:9997;background:#0f172a;color:#fff}.diag-panel{position:fixed;inset:0;z-index:10020;background:rgba(15,23,42,.62);display:none;padding:18px;overflow:auto}.diag-card{max-width:760px;margin:24px auto;background:#fff;border-radius:24px;padding:18px}.diag-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid #e2e8f0}.diag-pass{color:#15803d;font-weight:900}.diag-fail{color:#b91c1c;font-weight:900}.diag-wait{color:#64748b}.diag-summary{font-size:28px;font-weight:900}.diag-actions{display:flex;gap:8px;flex-wrap:wrap}.diag-actions button{flex:1}@media(max-width:700px){.diag-fab{bottom:150px;right:12px}.diag-card{margin:0}}`;document.head.appendChild(s)}
+async function run(){let root=$('diagResults');root.innerHTML='';$('diagSummary').textContent='Running tests...';let passed=0;for(let i=0;i<tests.length;i++){let [name,fn]=tests[i],row=document.createElement('div');row.className='diag-row';row.innerHTML=`<div><b>${name}</b><div class="small" id="diagmsg${i}">Checking...</div></div><div class="diag-wait" id="diagstate${i}">WAIT</div>`;root.appendChild(row);let res;try{res=await fn()}catch(e){res={pass:false,msg:e.message||String(e)}};if(res.pass)passed++;let st=$('diagstate'+i),msg=$('diagmsg'+i);st.textContent=res.pass?'PASS':'FAIL';st.className=res.pass?'diag-pass':'diag-fail';msg.textContent=res.msg||'';$('diagSummary').textContent=`${passed}/${i+1} passed`}
+let pct=Math.round(passed/tests.length*100);$('diagSummary').textContent=`${passed}/${tests.length} passed — ${pct}%`;localStorage.setItem('upc_last_diag_v156',JSON.stringify({at:new Date().toISOString(),passed,total:tests.length,pct}));}
+function mount(){css();let fab=document.createElement('button');fab.className='diag-fab';fab.textContent='Diagnostics';fab.onclick=()=>{$('diagPanel').style.display='block';run()};document.body.appendChild(fab);let p=document.createElement('div');p.id='diagPanel';p.className='diag-panel';p.innerHTML=`<div class="diag-card"><h2>V15.6 Platform Diagnostics</h2><div id="diagSummary" class="diag-summary">Ready</div><p class="small">Checks the live browser, bridge, subject roster, build flow, production tools, prompt database, Ollama, Creative Director transport and storage.</p><div class="diag-actions"><button id="diagRun" class="primary">Run Full Platform Test</button><button id="diagClose" class="secondary">Close</button></div><div id="diagResults"></div></div>`;document.body.appendChild(p);$('diagRun').onclick=run;$('diagClose').onclick=()=>p.style.display='none';p.addEventListener('click',e=>{if(e.target===p)p.style.display='none'});g.UPCDiagnosticsV156={run,open:()=>{p.style.display='block';run()}}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();})(window);
