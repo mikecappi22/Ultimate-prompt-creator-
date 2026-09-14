@@ -1,0 +1,4 @@
+/* UPC V16.4 master vocabulary bridge */
+(function(g){'use strict';if(g.__UPC_VOCAB_BRIDGE164__)return;g.__UPC_VOCAB_BRIDGE164__=1;
+function merge(){const v=g.UPCMasterVocabulary164,c=g.UPCCatalogV163;if(!v||!c){return setTimeout(merge,200)};const src=v.catalog||{};if(typeof c.extendCatalog==='function'){Object.entries(src).forEach(([k,vals])=>c.extendCatalog(k,vals));}else if(c.catalog){Object.entries(src).forEach(([k,vals])=>{c.catalog[k]=[...new Set([...(c.catalog[k]||[]),...vals])];});}const badge=document.querySelector('.brand .version');if(badge)badge.textContent='V16.4 MASTER VOCABULARY';document.title='Ultimate Prompt Creator V16.4';g.dispatchEvent(new CustomEvent('upc:vocabulary-ready',{detail:{version:'16.4'}}));}
+merge();})(window);
