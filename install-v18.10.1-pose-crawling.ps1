@@ -1,0 +1,56 @@
+$ErrorActionPreference = 'Stop'
+
+$dir = Join-Path $env:LOCALAPPDATA 'UltimatePromptCreatorMobile'
+$app = Join-Path $dir 'index.html'
+$url = 'https://raw.githubusercontent.com/mikecappi22/Ultimate-prompt-creator-/main/v18-category-pose-crawling-v18101.js'
+
+if (-not (Test-Path $app)) {
+    throw "Ultimate Prompt Creator index.html was not found at $app"
+}
+
+$html = [IO.File]::ReadAllText($app, [Text.Encoding]::UTF8)
+
+if ($html.Contains('__UPC_V18101_POSE_CRAWL__')) {
+    Write-Host 'V18.10.1 Pose Crawling add-on is already installed.' -ForegroundColor Yellow
+    exit 0
+}
+
+if (-not ($html.Contains('__UPC_V181_CLEAN_DB__') -or $html.Contains('__UPC_V18_CLEAN__'))) {
+    throw 'V18 clean core marker was not found. This installer expects the clean V18.1 database build.'
+}
+
+if (-not $html.Contains('__UPC_V1810_POSE__')) {
+    throw 'V18.10 Pose / Action is not installed yet. Install V18.10 first, then run this add-on.'
+}
+
+$backup = Join-Path $dir ('index-before-v18.10.1-pose-crawling-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.html')
+Copy-Item $app $backup -Force
+
+Write-Host 'Downloading V18.10.1 crawling / hands-and-knees pose expansion...' -ForegroundColor Cyan
+$module = (Invoke-WebRequest $url -UseBasicParsing).Content
+
+if (-not $module.Contains('__UPC_V18101_POSE_CRAWL__')) {
+    throw 'Downloaded pose add-on failed marker verification.'
+}
+
+$injected = "<script>`r`n$module`r`n</script>`r`n</body>"
+$html = $html.Replace('</body>', $injected)
+[IO.File]::WriteAllText($app, $html, (New-Object System.Text.UTF8Encoding($false)))
+
+$verify = [IO.File]::ReadAllText($app, [Text.Encoding]::UTF8)
+if (-not $verify.Contains('__UPC_V18101_POSE_CRAWL__')) {
+    Copy-Item $backup $app -Force
+    throw 'Install verification failed. The backup was restored automatically.'
+}
+
+Write-Host ''
+Write-Host 'PASS  V18 clean core found' -ForegroundColor Green
+Write-Host 'PASS  V18.10 Pose / Action found' -ForegroundColor Green
+Write-Host 'PASS  V18.10.1 crawling / hands-and-knees add-on installed' -ForegroundColor Green
+Write-Host "Backup: $backup" -ForegroundColor DarkGray
+Write-Host ''
+Write-Host 'Open the app with ?v=18101pose and search Pose for:' -ForegroundColor Cyan
+Write-Host '  crawl'
+Write-Host '  hands and knees'
+Write-Host '  on all fours'
+Write-Host '  tabletop'
